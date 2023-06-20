@@ -1,0 +1,25 @@
+[package]
+name = "chive-master"
+version = "0.1.0"
+edition = "2021"
+
+[package.metadata.cross.build]
+default-target = "x86_64-unknown-linux-gnu"
+pre-build = ["apt-get update && apt-get install build-essential pkg-config libsqlite3-dev libssl-dev -y"]
+
+[package.metadata.cross.target.x86_64-unknown-linux-gnu]
+image = "debian:11"
+
+[dependencies]
+tokio = { version = "1.28.2", default-features = false, features = ["rt-multi-thread"] }
+serenity = { version = "0.11.5", default-features = false, features = ["client", "gateway", "model", "rustls_backend"] }
+sqlx = { version = "0.6", features = ["runtime-tokio-native-tls" , "sqlite", "chrono"] }
+reqwest = { version = "0.11.18", features = ["json"] }
+serde = { version = "1.0.164", features = ["derive"] }
+serde_json = "1.0.96"
+chrono = "0.4.26"
+rand = "0.8.5"
+regex = "1.8.4"
+anyhow = "1.0.71"
+derive-getters = "0.3.0"
+dotenv = "0.15.0"

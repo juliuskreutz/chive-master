@@ -1,0 +1,3 @@
+CREATE TABLE IF NOT EXISTS channels (
+    channel INTEGER PRIMARY KEY NOT NULL
+);
