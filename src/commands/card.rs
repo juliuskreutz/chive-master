@@ -21,11 +21,39 @@ pub async fn command(
     command: &ApplicationCommandInteraction,
     pool: &SqlitePool,
 ) -> Result<()> {
-    let private = command
+    let user_id = command.user.id;
+
+    let scores = database::get_scores_by_user(user_id.0 as i64, pool).await?;
+
+    if scores.is_empty() {
+        command
+            .create_interaction_response(ctx, |r| {
+                r.kind(InteractionResponseType::DeferredChannelMessageWithSource)
+                    .interaction_response_data(
+                        |d: &mut serenity::builder::CreateInteractionResponseData<'_>| {
+                            d.ephemeral(true)
+                        },
+                    )
+            })
+            .await?;
+
+        return Err(anyhow!("This user doesn't have any connected character"));
+    }
+
+    command
+        .create_interaction_response(ctx, |r| {
+            r.kind(InteractionResponseType::DeferredChannelMessageWithSource)
+                .interaction_response_data(|d| d)
+        })
+        .await?;
+
+    let mut url = "https://hsr-profile-generator.vercel.app/api/generate?".to_string();
+
+    let showuid = command
         .data
         .options
         .iter()
-        .find(|o| o.name == "private")
+        .find(|o| o.name == "showuid")
         .and_then(|o| o.resolved.as_ref())
         .and_then(|o| {
             if let CommandDataOptionValue::Boolean(s) = o {
@@ -36,16 +64,26 @@ pub async fn command(
         })
         .unwrap();
 
-    command
-        .create_interaction_response(ctx, |r| {
-            r.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-                .interaction_response_data(|d| d.ephemeral(private))
+    url.push_str(&format!("showuid={showuid}"));
+
+    let character = command
+        .data
+        .options
+        .iter()
+        .find(|o| o.name == "character")
+        .and_then(|o| o.resolved.as_ref())
+        .and_then(|o| {
+            if let CommandDataOptionValue::Integer(i) = o {
+                Some(*i)
+            } else {
+                None
+            }
         })
-        .await?;
+        .unwrap();
 
-    let user_id = command.user.id;
+    url.push_str(&format!("&characterselection={character}"));
 
-    let primary_color = command
+    if let Some(primarycolor) = command
         .data
         .options
         .iter()
@@ -53,15 +91,16 @@ pub async fn command(
         .and_then(|o| o.resolved.as_ref())
         .and_then(|o| {
             if let CommandDataOptionValue::String(s) = o {
-                Some(s.to_string())
+                Some(s.replace('#', ""))
             } else {
                 None
             }
         })
-        .unwrap_or("292525".to_string())
-        .replace('#', "");
+    {
+        url.push_str(&format!("&primarycolor={primarycolor}"));
+    }
 
-    let secondary_color = command
+    if let Some(secondarycolor) = command
         .data
         .options
         .iter()
@@ -69,18 +108,13 @@ pub async fn command(
         .and_then(|o| o.resolved.as_ref())
         .and_then(|o| {
             if let CommandDataOptionValue::String(s) = o {
-                Some(s.to_string())
+                Some(s.replace('#', ""))
             } else {
                 None
             }
         })
-        .unwrap_or("E8D9C9".to_string())
-        .replace('#', "");
-
-    let scores = database::get_scores_by_user(user_id.0 as i64, pool).await?;
-
-    if scores.is_empty() {
-        return Err(anyhow!("This user doesn't have any connected character"));
+    {
+        url.push_str(&format!("&secondarycolor={secondarycolor}"));
     }
 
     let mut images = Vec::new();
@@ -88,20 +122,22 @@ pub async fn command(
     for score in scores {
         let uid = score.uid();
 
-        let bytes = reqwest::get(&format!("https://hsr-profile-generator.vercel.app/api/generate?uid={uid}&primarycolor={primary_color}&secondarycolor={secondary_color}")).await?.bytes().await?.to_vec();
+        let bytes = reqwest::get(&format!("{url}&uid={uid}"))
+            .await?
+            .bytes()
+            .await?
+            .to_vec();
 
         images.push(bytes);
     }
 
-    command
-        .create_followup_message(ctx, |m| {
-            for (i, image) in images.iter().enumerate() {
-                m.add_file((image.as_slice(), format!("profile{i}.png").as_str()));
-            }
-
-            m.ephemeral(private)
-        })
-        .await?;
+    for (i, image) in images.iter().enumerate() {
+        command
+            .create_followup_message(ctx, |m| {
+                m.add_file((image.as_slice(), format!("profile{i}.png").as_str()))
+            })
+            .await?;
+    }
 
     Ok(())
 }
@@ -111,9 +147,19 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
         .name(NAME)
         .description("Generate a player card. All relic slots must be filled. Optional color personalization in hex code.")
         .create_option(|o| {
-            o.name("private")
-                .description("Should the card be displayed privately.")
+            o.name("showuid")
+                .description("Should the card show your uid.")
                 .kind(CommandOptionType::Boolean)
+                .required(true)
+        })
+        .create_option(|o| {
+            o.name("character")
+                .description("Which support character should it generate.")
+                .kind(CommandOptionType::Integer)
+                .add_int_choice("0", 0)
+                .add_int_choice("1", 1)
+                .add_int_choice("2", 2)
+                .add_int_choice("3", 3)
                 .required(true)
         })
         .create_option(|o| {
