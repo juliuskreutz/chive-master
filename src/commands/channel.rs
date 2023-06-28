@@ -5,8 +5,7 @@ use serenity::{
         prelude::{
             command::CommandOptionType,
             interaction::{
-                application_command::{ApplicationCommandInteraction, CommandDataOptionValue},
-                InteractionResponseType,
+                application_command::ApplicationCommandInteraction, InteractionResponseType,
             },
         },
         Permissions,
@@ -25,8 +24,8 @@ pub async fn command(
     pool: &SqlitePool,
 ) -> Result<()> {
     match command.data.options[0].name.as_str() {
-        "set" => set(ctx, command, pool).await,
-        "delete" => delete(ctx, command, pool).await,
+        "enable" => enable(ctx, command, pool).await,
+        "disable" => disable(ctx, command, pool).await,
         _ => Err(anyhow!("Not a subcommand")),
     }
 }
@@ -36,31 +35,19 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
         .name(NAME)
         .description("Channel management")
         .create_option(|o| {
-            o.name("set")
-                .description("Set an update channel")
+            o.name("enable")
+                .description("Enable current channel as update channel")
                 .kind(CommandOptionType::SubCommand)
-                .create_sub_option(|so| {
-                    so.name("channel")
-                        .description("Channel")
-                        .kind(CommandOptionType::Channel)
-                        .required(true)
-                })
         })
         .create_option(|o| {
-            o.name("delete")
-                .description("Delete an update channel")
+            o.name("disable")
+                .description("Disable current channel as update channel")
                 .kind(CommandOptionType::SubCommand)
-                .create_sub_option(|so| {
-                    so.name("channel")
-                        .description("Channel")
-                        .kind(CommandOptionType::Channel)
-                        .required(true)
-                })
         })
         .default_member_permissions(Permissions::ADMINISTRATOR)
 }
 
-async fn set(
+async fn enable(
     ctx: &Context,
     command: &ApplicationCommandInteraction,
     pool: &SqlitePool,
@@ -72,22 +59,17 @@ async fn set(
         })
         .await?;
 
-    let option = command.data.options[0].options[0]
-        .resolved
-        .as_ref()
-        .ok_or_else(|| anyhow!("No option"))?;
+    if command.guild_id.is_none() {
+        return Err(anyhow!("This command has to be in a guild"));
+    }
 
-    let CommandDataOptionValue::Channel(channel) = option else {
-        return Err(anyhow!("Not a channel"));
-    };
-
-    database::set_channel(ChannelData::new(channel.id.0 as i64), pool).await?;
+    database::set_channel(ChannelData::new(command.channel_id.0 as i64), pool).await?;
 
     command
         .create_followup_message(ctx, |m| {
             m.content(format!(
-                "Added {}. Make sure, that this channel has the right permissions.",
-                channel.id.mention()
+                "Enabled {}. Make sure, that this channel has the right permissions.",
+                command.channel_id.mention()
             ))
             .ephemeral(true)
         })
@@ -96,7 +78,7 @@ async fn set(
     Ok(())
 }
 
-async fn delete(
+async fn disable(
     ctx: &Context,
     command: &ApplicationCommandInteraction,
     pool: &SqlitePool,
@@ -108,20 +90,11 @@ async fn delete(
         })
         .await?;
 
-    let option = command.data.options[0].options[0]
-        .resolved
-        .as_ref()
-        .ok_or_else(|| anyhow!("No option"))?;
-
-    let CommandDataOptionValue::Channel(channel) = option else {
-        return Err(anyhow!("Not a channel"));
-    };
-
-    database::delete_channel_by_channel(channel.id.0 as i64, pool).await?;
+    database::delete_channel_by_channel(command.channel_id.0 as i64, pool).await?;
 
     command
         .create_followup_message(ctx, |m| {
-            m.content(format!("Deleted {}", channel.id.mention()))
+            m.content(format!("Disabled {}", command.channel_id.mention()))
                 .ephemeral(true)
         })
         .await?;

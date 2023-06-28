@@ -249,6 +249,14 @@ async fn update_roles(cache: Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()>
                     continue;
                 }
 
+                if *role.chives() < 0 {
+                    let _ = member
+                        .add_role(&cache.http, RoleId(*role.role() as u64))
+                        .await;
+
+                    continue;
+                }
+
                 let _ = member
                     .remove_role(&cache.http, RoleId(*role.role() as u64))
                     .await;

@@ -7,6 +7,7 @@ use serenity::{
             application_command::{ApplicationCommandInteraction, CommandDataOptionValue},
             InteractionResponseType,
         },
+        RoleId,
     },
     prelude::Context,
 };
@@ -45,6 +46,14 @@ pub async fn command(
     }
 
     database::delete_score_by_uid(uid, pool).await?;
+
+    if let Some(mut member) = command.member.clone() {
+        let roles = database::get_roles_by_guild(member.guild_id.0 as i64, pool).await?;
+
+        for role in roles {
+            let _ = member.remove_role(&ctx, RoleId(*role.role() as u64)).await;
+        }
+    }
 
     command
         .create_followup_message(ctx, |m| {

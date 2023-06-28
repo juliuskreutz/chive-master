@@ -40,6 +40,14 @@ pub async fn delete_role_by_role(role: i64, pool: &SqlitePool) -> Result<()> {
     Ok(())
 }
 
+pub async fn get_roles_by_guild(guild: i64, pool: &SqlitePool) -> Result<Vec<RoleData>> {
+    Ok(
+        sqlx::query_as!(RoleData, "SELECT * FROM roles WHERE guild == ?1", guild)
+            .fetch_all(pool)
+            .await?,
+    )
+}
+
 pub async fn get_roles_order_by_chives_desc(pool: &SqlitePool) -> Result<Vec<RoleData>> {
     Ok(
         sqlx::query_as!(RoleData, "SELECT * FROM roles ORDER BY chives DESC")
