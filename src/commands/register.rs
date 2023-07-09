@@ -47,6 +47,10 @@ pub async fn command(
     };
 
     api::get(uid).await?;
+    let _ = reqwest::Client::new()
+        .put(&format!("https://stardb.gg/api/scores/{uid}"))
+        .send()
+        .await;
 
     if let Ok(score_data) = database::get_score_by_uid(uid, pool).await {
         return Err(anyhow!(
@@ -104,6 +108,10 @@ pub async fn modal(
         .parse()?;
 
     api::get(uid).await?;
+    let _ = reqwest::Client::new()
+        .put(&format!("https://stardb.gg/api/scores/{uid}"))
+        .send()
+        .await;
 
     if let Ok(score_data) = database::get_score_by_uid(uid, pool).await {
         return Err(anyhow!(
