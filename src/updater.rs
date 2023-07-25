@@ -25,7 +25,11 @@ pub fn init(cache: Arc<CacheAndHttp>, pool: SqlitePool) {
         loop {
             let now = Instant::now();
             if let Err(e) = update_leaderboard(&cache_clone, &pool_clone).await {
-                log(&format!("Leaderboard {}", e), &cache_clone).await;
+                log(
+                    &format!("Error: Leaderboard {} <@246684413075652612>", e),
+                    &cache_clone,
+                )
+                .await;
             }
             log(
                 &format!("Updated leaderboard in {} seconds", now.elapsed().as_secs()),
@@ -45,7 +49,11 @@ pub fn init(cache: Arc<CacheAndHttp>, pool: SqlitePool) {
 
             let now = Instant::now();
             if let Err(e) = update_verifications(&cache, &pool).await {
-                log(&format!("Verifications {}", e), &cache).await;
+                log(
+                    &format!("Error: Verifications {} <@246684413075652612>", e),
+                    &cache,
+                )
+                .await;
             }
             log(
                 &format!(
@@ -57,8 +65,8 @@ pub fn init(cache: Arc<CacheAndHttp>, pool: SqlitePool) {
             .await;
 
             let now = Instant::now();
-            if let Err(e) = update_roles(cache.clone(), &pool).await {
-                log(&format!("Roles {}", e), &cache).await;
+            if let Err(e) = update_roles(&cache, &pool).await {
+                log(&format!("Error: Roles {} <@246684413075652612>", e), &cache).await;
             }
             log(
                 &format!("Updated roles in {} seconds", now.elapsed().as_secs()),
@@ -181,7 +189,7 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
             }
         }
 
-        ChannelId(*channel.channel() as u64)
+        if let Err(serenity::Error::Http(_)) = ChannelId(*channel.channel() as u64)
             .send_message(&cache.http, |m| {
                 m.embed(|e| {
                     e.color(0xFFD700)
@@ -189,7 +197,20 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
                         .description(message1.join("\n"))
                 })
             })
-            .await?;
+            .await
+        {
+            log(
+                &format!(
+                    "Error: Channel <#{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
+                    channel.channel()
+                ),
+                cache,
+            )
+            .await;
+
+            database::delete_channel_by_channel(*channel.channel(), pool).await?;
+            continue;
+        }
 
         ChannelId(*channel.channel() as u64)
             .send_message(&cache.http, |m| {
@@ -210,7 +231,7 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
     Ok(())
 }
 
-async fn update_roles(cache: Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()> {
+async fn update_roles(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()> {
     let roles = database::get_roles_order_by_chives_desc(pool).await?;
 
     let mut guild_roles: HashMap<_, Vec<RoleData>> = HashMap::new();
@@ -220,6 +241,7 @@ async fn update_roles(cache: Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()>
     }
 
     let mut c = HashSet::new();
+    let mut d = HashSet::new();
 
     let scores = database::get_scores(pool).await?;
     for score in scores {
@@ -240,9 +262,23 @@ async fn update_roles(cache: Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()>
                 continue;
             };
 
-            let _ = member
+            if let Err(serenity::Error::Http(_)) = member
                 .add_role(&cache.http, RoleId(*role_add.role() as u64))
-                .await;
+                .await
+            {
+                if d.insert(role_add.role()) {
+                    log(
+                        &format!(
+                            "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
+                            role_add.role()
+                        ),
+                        cache,
+                    )
+                    .await;
+
+                    database::delete_role_by_role(*role_add.role(), pool).await?;
+                }
+            }
 
             for role in &guild_roles[&guild] {
                 if role.role() == role_add.role() {
@@ -250,16 +286,44 @@ async fn update_roles(cache: Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()>
                 }
 
                 if *role.chives() < 0 {
-                    let _ = member
+                    if let Err(serenity::Error::Http(_)) = member
                         .add_role(&cache.http, RoleId(*role.role() as u64))
+                        .await
+                    {
+                        if d.insert(role.role()) {
+                            log(
+                            &format!(
+                                "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
+                                role.role()
+                            ),
+                            cache,
+                        )
                         .await;
+
+                            database::delete_role_by_role(*role.role(), pool).await?;
+                        }
+                    }
 
                     continue;
                 }
 
-                let _ = member
+                if let Err(serenity::Error::Http(_)) = member
                     .remove_role(&cache.http, RoleId(*role.role() as u64))
+                    .await
+                {
+                    if d.insert(role.role()) {
+                        log(
+                        &format!(
+                            "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
+                            role.role()
+                        ),
+                        cache,
+                    )
                     .await;
+
+                        database::delete_role_by_role(*role.role(), pool).await?;
+                    }
+                }
             }
         }
     }
@@ -267,7 +331,7 @@ async fn update_roles(cache: Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()>
     Ok(())
 }
 
-async fn log(content: &str, cache: &Arc<CacheAndHttp>) {
+pub async fn log(content: &str, cache: &Arc<CacheAndHttp>) {
     ChannelId(1119634729377992774)
         .send_message(&cache.http, |m| m.content(content))
         .await

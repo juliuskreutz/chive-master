@@ -5,21 +5,35 @@ edition = "2021"
 
 [package.metadata.cross.build]
 default-target = "x86_64-unknown-linux-gnu"
-pre-build = ["apt-get update && apt-get install build-essential pkg-config libsqlite3-dev libssl-dev -y"]
+pre-build = [
+    "apt-get update && apt-get install build-essential pkg-config libsqlite3-dev libssl-dev libfontconfig-dev -y",
+]
 
 [package.metadata.cross.target.x86_64-unknown-linux-gnu]
 image = "debian:11"
 
 [dependencies]
-tokio = { version = "1.28.2", default-features = false, features = ["rt-multi-thread"] }
-serenity = { version = "0.11.5", default-features = false, features = ["client", "gateway", "model", "rustls_backend"] }
-sqlx = { version = "0.6", features = ["runtime-tokio-native-tls" , "sqlite", "chrono"] }
+tokio = { version = "1.29.1", default-features = false, features = [
+    "rt-multi-thread",
+] }
+serenity = { version = "0.11.6", default-features = false, features = [
+    "client",
+    "gateway",
+    "model",
+    "rustls_backend",
+] }
+sqlx = { version = "0.7.1", features = [
+    "runtime-tokio-native-tls",
+    "sqlite",
+    "chrono",
+] }
 reqwest = { version = "0.11.18", features = ["json"] }
-serde = { version = "1.0.164", features = ["derive"] }
-serde_json = "1.0.96"
+serde = { version = "1.0.171", features = ["derive"] }
+serde_json = "1.0.103"
 chrono = "0.4.26"
 rand = "0.8.5"
-regex = "1.8.4"
-anyhow = "1.0.71"
+regex = "1.9.1"
+anyhow = "1.0.72"
 derive-getters = "0.3.0"
 dotenv = "0.15.0"
+url = "2.4.0"

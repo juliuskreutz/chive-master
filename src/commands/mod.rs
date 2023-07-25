@@ -5,6 +5,7 @@ pub mod message;
 pub mod register;
 pub mod role;
 pub mod roles;
+pub mod rolestats;
 pub mod status;
 pub mod unregister;
 pub mod verify;

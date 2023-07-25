@@ -4,6 +4,8 @@ mod database;
 mod handler;
 mod timestamp;
 mod updater;
+//FIXME: Temporary
+mod dialogues;
 
 use std::{env, str::FromStr};
 
@@ -26,15 +28,21 @@ async fn main() -> Result<()> {
     sqlx::migrate!().run(&pool).await?;
 
     let mut client = loop {
-        if let Ok(client) = Client::builder(&discord_token, GatewayIntents::non_privileged())
-            .event_handler(Handler { pool: pool.clone() })
-            .await
+        if let Ok(client) = Client::builder(
+            &discord_token,
+            GatewayIntents::non_privileged() | GatewayIntents::GUILD_MEMBERS,
+        )
+        .event_handler(Handler { pool: pool.clone() })
+        .await
         {
             break client;
         }
     };
 
     updater::init(client.cache_and_http.clone(), pool);
+
+    // //FIXME: Temporary
+    dialogues::init(&client).await?;
 
     client.start().await?;
 

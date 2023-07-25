@@ -131,12 +131,18 @@ pub async fn command(
         images.push(bytes);
     }
 
-    for (i, image) in images.iter().enumerate() {
-        command
-            .create_followup_message(ctx, |m| {
-                m.add_file((image.as_slice(), format!("profile{i}.png").as_str()))
-            })
-            .await?;
+    for (i, bytes) in images.iter().enumerate() {
+        if let Ok(s) = String::from_utf8(bytes.clone()) {
+            command
+                .create_followup_message(ctx, |m| m.content(s))
+                .await?;
+        } else {
+            command
+                .create_followup_message(ctx, |m| {
+                    m.add_file((bytes.as_slice(), format!("profile{i}.png").as_str()))
+                })
+                .await?;
+        }
     }
 
     Ok(())
@@ -148,13 +154,13 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
         .description("Generate a player card. All relic slots must be filled. Optional color personalization in hex code.")
         .create_option(|o| {
             o.name("showuid")
-                .description("Should the card show your uid.")
+                .description("Should the card show your uid")
                 .kind(CommandOptionType::Boolean)
                 .required(true)
         })
         .create_option(|o| {
             o.name("character")
-                .description("Which support character should it generate.")
+                .description("Which support character should it generate")
                 .kind(CommandOptionType::Integer)
                 .add_int_choice("0", 0)
                 .add_int_choice("1", 1)

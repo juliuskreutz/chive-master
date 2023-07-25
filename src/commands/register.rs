@@ -54,7 +54,7 @@ pub async fn command(
 
     if let Ok(score_data) = database::get_score_by_uid(uid, pool).await {
         return Err(anyhow!(
-            "Already registered to {}.",
+            "Already registered to {}",
             UserId(*score_data.user() as u64).mention()
         ));
     }
@@ -115,7 +115,7 @@ pub async fn modal(
 
     if let Ok(score_data) = database::get_score_by_uid(uid, pool).await {
         return Err(anyhow!(
-            "Already registered to {}.",
+            "Already registered to {}",
             UserId(*score_data.user() as u64).mention()
         ));
     }

@@ -18,7 +18,7 @@ use serenity::{
 };
 use sqlx::SqlitePool;
 
-use crate::commands;
+use crate::{commands, dialogues};
 
 pub struct Handler {
     pub pool: SqlitePool,
@@ -43,6 +43,11 @@ impl Handler {
             commands::roles::NAME => commands::roles::command(ctx, command, &self.pool).await,
             commands::role::NAME => commands::role::command(ctx, command, &self.pool).await,
             commands::channel::NAME => commands::channel::command(ctx, command, &self.pool).await,
+            commands::rolestats::NAME => {
+                commands::rolestats::command(ctx, command, &self.pool).await
+            }
+            //FIXME: Temporary
+            dialogues::NAME => dialogues::command(ctx, command).await,
             _ => Ok(()),
         }
     }
@@ -103,6 +108,9 @@ impl EventHandler for Handler {
                 .create_application_command(|command| commands::roles::register(command))
                 .create_application_command(|command| commands::role::register(command))
                 .create_application_command(|command| commands::channel::register(command))
+                .create_application_command(|command| commands::rolestats::register(command))
+                //FIXME: Temporary
+                .create_application_command(|command| dialogues::register(command))
         })
         .await
         .unwrap();
