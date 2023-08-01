@@ -23,7 +23,7 @@ pub async fn command(
 ) -> Result<()> {
     let user_id = command.user.id;
 
-    let scores = database::get_scores_by_user(user_id.0 as i64, pool).await?;
+    let scores = database::get_connections_by_user(user_id.0 as i64, pool).await?;
 
     if scores.is_empty() {
         command
@@ -120,7 +120,7 @@ pub async fn command(
     let mut images = Vec::new();
 
     for score in scores {
-        let uid = score.uid();
+        let uid = score.uid;
 
         let bytes = reqwest::get(&format!("{url}&uid={uid}"))
             .await?
@@ -170,13 +170,13 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
         })
         .create_option(|o| {
             o.name("primarycolor")
-                .description("Primary Color")
+                .description("Primary Color in hexcode notation")
                 .kind(CommandOptionType::String)
                 .required(false)
         })
         .create_option(|o| {
             o.name("secondarycolor")
-                .description("Secondary Color")
+                .description("Secondary Color in hexcode notation")
                 .kind(CommandOptionType::String)
                 .required(false)
         })

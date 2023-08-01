@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM verifications WHERE uid == ?1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "e1fa891d9763d73a2374c3a74e87597a5717a175b59dbfba429dd1fcb770ef35"
+}

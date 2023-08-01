@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS connections (
+    uid INTEGER PRIMARY KEY NOT NULL,
+    user INTEGER NOT NULL
+);

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR REPLACE INTO verifications(uid, user, name, otp) VALUES(?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "593b8298565c8781db574d5d56ace9f78854fd9f94f00577116175a99ecf9cc7"
+}

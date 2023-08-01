@@ -16,11 +16,7 @@ use serenity::{
 };
 use sqlx::SqlitePool;
 
-use crate::{
-    api,
-    database::{self, ScoreData},
-    timestamp,
-};
+use crate::database::{self, DbConnection};
 
 pub const NAME: &str = "verify";
 
@@ -57,14 +53,9 @@ pub async fn command(
     let vd = database::get_verification_by_uid(uid, pool).await?;
     database::delete_verification_by_uid(uid, pool).await?;
 
-    let api_data = api::get(uid).await?;
-
-    let name = api_data.player().nickname().clone();
-    let chives = *api_data.player().space_info().achievement_count();
     let user = *vd.user();
-    let date = timestamp::by_uid(uid)?;
 
-    let score_data = ScoreData::new(uid, name, chives, user, date);
+    let score_data = DbConnection { uid, user };
     database::set_score(&score_data, pool).await?;
 
     command

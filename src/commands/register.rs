@@ -17,10 +17,7 @@ use serenity::{
 };
 use sqlx::SqlitePool;
 
-use crate::{
-    api,
-    database::{self, VerificationData},
-};
+use crate::database::{self, VerificationData};
 
 pub const NAME: &str = "register";
 const UID_ID: &str = "uid";
@@ -46,16 +43,10 @@ pub async fn command(
         return Err(anyhow!("Not an integer"));
     };
 
-    api::get(uid).await?;
-    let _ = reqwest::Client::new()
-        .put(&format!("https://stardb.gg/api/scores/{uid}"))
-        .send()
-        .await;
-
     if let Ok(score_data) = database::get_score_by_uid(uid, pool).await {
         return Err(anyhow!(
             "Already registered to {}",
-            UserId(*score_data.user() as u64).mention()
+            UserId(score_data.user as u64).mention()
         ));
     }
 
@@ -107,16 +98,10 @@ pub async fn modal(
         .value
         .parse()?;
 
-    api::get(uid).await?;
-    let _ = reqwest::Client::new()
-        .put(&format!("https://stardb.gg/api/scores/{uid}"))
-        .send()
-        .await;
-
     if let Ok(score_data) = database::get_score_by_uid(uid, pool).await {
         return Err(anyhow!(
             "Already registered to {}",
-            UserId(*score_data.user() as u64).mention()
+            UserId(score_data.user as u64).mention()
         ));
     }
 

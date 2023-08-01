@@ -1,8 +1,7 @@
-mod api;
 mod commands;
 mod database;
 mod handler;
-mod timestamp;
+mod stardb;
 mod updater;
 //FIXME: Temporary
 mod dialogues;

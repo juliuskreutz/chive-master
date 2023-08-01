@@ -39,9 +39,9 @@ pub async fn command(
     };
 
     let user = command.user.id.0 as i64;
-    let scores = database::get_scores_by_user(user, pool).await?;
+    let scores = database::get_connections_by_user(user, pool).await?;
 
-    if !scores.iter().any(|s| *s.uid() == uid) {
+    if !scores.iter().any(|s| s.uid == uid) {
         return Err(anyhow!("This uid is not connected to your account"));
     }
 

@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT * FROM verifications WHERE user == ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "uid",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "user",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "otp",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "56fcb1cf5ffe81e6d9a0dc2af49183560dda3e21640ce2613a53f5c35cd8dfab"
+}

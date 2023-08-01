@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT * FROM scores WHERE user = ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "uid",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "chives",
+        "ordinal": 2,
+        "type_info": "Int64"
+      },
+      {
+        "name": "user",
+        "ordinal": 3,
+        "type_info": "Int64"
+      },
+      {
+        "name": "timestamp",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ebd2deac38d4c2591b45c3b15f44532707fd3523b6a0bc536802fba0c439e864"
+}

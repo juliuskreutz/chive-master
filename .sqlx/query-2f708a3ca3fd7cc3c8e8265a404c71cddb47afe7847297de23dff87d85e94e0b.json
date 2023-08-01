@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT * FROM roles ORDER BY chives DESC",
+  "describe": {
+    "columns": [
+      {
+        "name": "role",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "chives",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "guild",
+        "ordinal": 2,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2f708a3ca3fd7cc3c8e8265a404c71cddb47afe7847297de23dff87d85e94e0b"
+}

@@ -5,7 +5,6 @@ use std::{
 };
 
 use anyhow::Result;
-use regex::{Captures, Regex};
 use serenity::{
     model::prelude::{ChannelId, GuildId, RoleId, UserId},
     CacheAndHttp,
@@ -13,34 +12,13 @@ use serenity::{
 use sqlx::SqlitePool;
 
 use crate::{
-    api,
-    database::{self, RoleData, ScoreData},
-    timestamp,
+    database::{self, DbConnection, RoleData},
+    stardb,
 };
 
 pub fn init(cache: Arc<CacheAndHttp>, pool: SqlitePool) {
-    let cache_clone = cache.clone();
-    let pool_clone = pool.clone();
     tokio::spawn(async move {
-        loop {
-            let now = Instant::now();
-            if let Err(e) = update_leaderboard(&cache_clone, &pool_clone).await {
-                log(
-                    &format!("Error: Leaderboard {} <@246684413075652612>", e),
-                    &cache_clone,
-                )
-                .await;
-            }
-            log(
-                &format!("Updated leaderboard in {} seconds", now.elapsed().as_secs()),
-                &cache_clone,
-            )
-            .await;
-        }
-    });
-
-    tokio::spawn(async move {
-        let minutes = 5;
+        let minutes = 10;
 
         let mut timer = tokio::time::interval(Duration::from_secs(60 * minutes));
 
@@ -65,6 +43,20 @@ pub fn init(cache: Arc<CacheAndHttp>, pool: SqlitePool) {
             .await;
 
             let now = Instant::now();
+            if let Err(e) = update_leaderboard(&cache, &pool).await {
+                log(
+                    &format!("Error: Leaderboard {} <@246684413075652612>", e),
+                    &cache,
+                )
+                .await;
+            }
+            log(
+                &format!("Updated leaderboard in {} seconds", now.elapsed().as_secs()),
+                &cache,
+            )
+            .await;
+
+            let now = Instant::now();
             if let Err(e) = update_roles(&cache, &pool).await {
                 log(&format!("Error: Roles {} <@246684413075652612>", e), &cache).await;
             }
@@ -75,10 +67,7 @@ pub fn init(cache: Arc<CacheAndHttp>, pool: SqlitePool) {
             .await;
 
             log(
-                &format!(
-                    "Completed update of verifications and roles. Next update in {}min",
-                    minutes
-                ),
+                &format!("Completed update. Next update in {}min", minutes),
                 &cache,
             )
             .await;
@@ -91,27 +80,20 @@ async fn update_verifications(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> R
     for verification_data in verifications {
         let uid = *verification_data.uid();
 
-        let api_data = api::get(uid).await?;
+        let api_data = stardb::get(uid).await?;
 
-        if !api_data
-            .player()
-            .signature()
-            .ends_with(verification_data.otp())
-        {
+        if !api_data.signature.ends_with(verification_data.otp()) {
             continue;
         }
 
         database::delete_verification_by_uid(uid, pool).await?;
 
-        let name = api_data.player().nickname().clone();
-        let chives = *api_data.player().space_info().achievement_count();
-        let user_id = *verification_data.user();
-        let date = timestamp::by_uid(uid)?;
+        let user = *verification_data.user();
 
-        let score_data = ScoreData::new(uid, name, chives, user_id, date);
+        let score_data = DbConnection { uid, user };
         database::set_score(&score_data, pool).await?;
 
-        if let Ok(channel) = UserId(user_id as u64).create_dm_channel(&cache).await {
+        if let Ok(channel) = UserId(user as u64).create_dm_channel(&cache).await {
             let _ = channel
                 .send_message(&cache.http, |m| {
                     m.content("You are now verified! You can change your HSR bio back :D")
@@ -124,52 +106,31 @@ async fn update_verifications(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> R
 }
 
 async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()> {
-    let now = Instant::now();
+    let mut scores = Vec::new();
 
-    let scores = database::get_scores(pool).await?;
-    for score_data in scores {
-        let uid = *score_data.uid();
+    for uid in database::get_uids(pool).await? {
+        let score = stardb::get(uid).await?;
 
-        let Ok(api_data) = api::get(uid).await else {
-            continue;
-        };
-
-        let name = api_data.player().nickname().clone();
-        let chives = *api_data.player().space_info().achievement_count();
-        let user = *score_data.user();
-        let date = if chives != *score_data.chives() {
-            timestamp::by_uid(uid)?
-        } else {
-            *score_data.timestamp()
-        };
-
-        let score_data = ScoreData::new(uid, name, chives, user, date);
-
-        database::set_score(&score_data, pool).await?;
+        scores.push(score);
     }
 
-    let scores = database::get_scores_order_by_chives_desc_timestamp(pool).await?;
+    scores.sort_unstable_by_key(|s| s.global_rank);
 
     let mut message1 = Vec::new();
     let mut message2 = Vec::new();
 
-    let re = Regex::new(r"<.*>(.*)</?.*>").unwrap();
     for (i, data) in scores.iter().take(100).enumerate() {
         let place = i + 1;
-        let chives = *data.chives();
-        let name = re
-            .replace_all(data.name(), |c: &Captures| {
-                c.get(1).unwrap().as_str().to_string()
-            })
-            .to_string();
+        let achievement_count = data.achievement_count;
+        let name = data.name.clone();
 
         if i < 50 {
             message1.push(format!(
-                "**{place}** - {chives} <:chive:1112854178302267452> - {name}",
+                "**{place}** - {achievement_count} <:chive:1112854178302267452> - {name}",
             ));
         } else {
             message2.push(format!(
-                "**{place}** - {chives} <:chive:1112854178302267452> - {name}",
+                "**{place}** - {achievement_count} <:chive:1112854178302267452> - {name}",
             ));
         }
     }
@@ -217,12 +178,7 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
                 m.embed(|e| {
                     e.color(0xFFD700)
                         .description(message2.join("\n"))
-                        .footer(|f| {
-                            f.text(format!(
-                                "Refreshes every {} minutes",
-                                (now.elapsed().as_secs_f64() / 60.0).ceil()
-                            ))
-                        })
+                        .footer(|f| f.text("Refreshes every 10 minutes"))
                 })
             })
             .await?;
@@ -243,10 +199,11 @@ async fn update_roles(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()
     let mut c = HashSet::new();
     let mut d = HashSet::new();
 
-    let scores = database::get_scores(pool).await?;
+    let scores = database::get_connections(pool).await?;
     for score in scores {
         for (&guild, roles) in &guild_roles {
-            let user = *score.user();
+            let uid = score.uid;
+            let user = score.user;
 
             let key = (guild, user);
             if c.contains(&key) {
@@ -258,7 +215,12 @@ async fn update_roles(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()
                 continue;
             };
 
-            let Some(role_add) = roles.iter().find(|r| score.chives() >= r.chives()) else {
+            let score = stardb::get(uid).await?;
+
+            let Some(role_add) = roles
+                .iter()
+                .find(|r| score.achievement_count >= *r.chives())
+            else {
                 continue;
             };
 
@@ -320,7 +282,6 @@ async fn update_roles(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()
                         cache,
                     )
                     .await;
-
                         database::delete_role_by_role(*role.role(), pool).await?;
                     }
                 }

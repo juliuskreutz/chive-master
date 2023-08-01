@@ -1,7 +1,0 @@
-CREATE TABLE IF NOT EXISTS scores (
-    uid INTEGER PRIMARY KEY NOT NULL,
-    name TEXT NOT NULL,
-    chives INTEGER NOT NULL,
-    user INTEGER NOT NULL,
-    timestamp TIMESTAMP NOT NULL
-);
