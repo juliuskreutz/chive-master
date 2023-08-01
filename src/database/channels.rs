@@ -1,10 +1,8 @@
 use anyhow::Result;
-use derive_getters::Getters;
 use sqlx::SqlitePool;
 
-#[derive(Getters)]
 pub struct ChannelData {
-    channel: i64,
+    pub channel: i64,
 }
 
 impl ChannelData {

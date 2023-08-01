@@ -30,11 +30,7 @@ sqlx = { version = "0.7.1", features = [
 reqwest = { version = "0.11.18", features = ["json"] }
 serde = { version = "1.0.171", features = ["derive"] }
 serde_json = "1.0.103"
-chrono = "0.4.26"
 rand = "0.8.5"
-regex = "1.9.1"
 anyhow = "1.0.72"
-derive-getters = "0.3.0"
 dotenv = "0.15.0"
 url = "2.4.0"
-futures = "0.3.28"

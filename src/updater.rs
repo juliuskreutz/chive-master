@@ -78,17 +78,17 @@ pub fn init(cache: Arc<CacheAndHttp>, pool: SqlitePool) {
 async fn update_verifications(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()> {
     let verifications = database::get_verifications(pool).await?;
     for verification_data in verifications {
-        let uid = *verification_data.uid();
+        let uid = verification_data.uid;
 
         let api_data = stardb::get(uid).await?;
 
-        if !api_data.signature.ends_with(verification_data.otp()) {
+        if !api_data.signature.ends_with(&verification_data.otp) {
             continue;
         }
 
         database::delete_verification_by_uid(uid, pool).await?;
 
-        let user = *verification_data.user();
+        let user = verification_data.user;
 
         let score_data = DbConnection { uid, user };
         database::set_score(&score_data, pool).await?;
@@ -137,7 +137,7 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
 
     let channels = database::get_channels(pool).await?;
     for channel in channels {
-        if let Ok(messages) = ChannelId(*channel.channel() as u64)
+        if let Ok(messages) = ChannelId(channel.channel as u64)
             .messages(&cache.http, |b| b.limit(2))
             .await
         {
@@ -150,7 +150,7 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
             }
         }
 
-        if let Err(serenity::Error::Http(_)) = ChannelId(*channel.channel() as u64)
+        if let Err(serenity::Error::Http(_)) = ChannelId(channel.channel as u64)
             .send_message(&cache.http, |m| {
                 m.embed(|e| {
                     e.color(0xFFD700)
@@ -163,17 +163,17 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
             log(
                 &format!(
                     "Error: Channel <#{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
-                    channel.channel()
+                    channel.channel
                 ),
                 cache,
             )
             .await;
 
-            database::delete_channel_by_channel(*channel.channel(), pool).await?;
+            database::delete_channel_by_channel(channel.channel, pool).await?;
             continue;
         }
 
-        ChannelId(*channel.channel() as u64)
+        ChannelId(channel.channel as u64)
             .send_message(&cache.http, |m| {
                 m.embed(|e| {
                     e.color(0xFFD700)
@@ -193,7 +193,7 @@ async fn update_roles(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()
     let mut guild_roles: HashMap<_, Vec<RoleData>> = HashMap::new();
 
     for role in roles {
-        guild_roles.entry(*role.guild()).or_default().push(role);
+        guild_roles.entry(role.guild).or_default().push(role);
     }
 
     let mut c = HashSet::new();
@@ -217,52 +217,48 @@ async fn update_roles(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()
 
             let score = stardb::get(uid).await?;
 
-            let Some(role_add) = roles
-                .iter()
-                .find(|r| score.achievement_count >= *r.chives())
-            else {
+            let Some(role_add) = roles.iter().find(|r| score.achievement_count >= r.chives) else {
                 continue;
             };
 
             if let Err(serenity::Error::Http(_)) = member
-                .add_role(&cache.http, RoleId(*role_add.role() as u64))
+                .add_role(&cache.http, RoleId(role_add.role as u64))
                 .await
             {
-                if d.insert(role_add.role()) {
+                if d.insert(role_add.role) {
                     log(
                         &format!(
                             "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
-                            role_add.role()
+                            role_add.role
                         ),
                         cache,
                     )
                     .await;
 
-                    database::delete_role_by_role(*role_add.role(), pool).await?;
+                    database::delete_role_by_role(role_add.role, pool).await?;
                 }
             }
 
             for role in &guild_roles[&guild] {
-                if role.role() == role_add.role() {
+                if role.role == role_add.role {
                     continue;
                 }
 
-                if *role.chives() < 0 {
-                    if let Err(serenity::Error::Http(_)) = member
-                        .add_role(&cache.http, RoleId(*role.role() as u64))
-                        .await
+                if role.chives < 0 {
+                    if let Err(serenity::Error::Http(_)) =
+                        member.add_role(&cache.http, RoleId(role.role as u64)).await
                     {
-                        if d.insert(role.role()) {
+                        if d.insert(role.role) {
                             log(
                             &format!(
                                 "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
-                                role.role()
+                                role.role
                             ),
                             cache,
                         )
                         .await;
 
-                            database::delete_role_by_role(*role.role(), pool).await?;
+                            database::delete_role_by_role(role.role, pool).await?;
                         }
                     }
 
@@ -270,19 +266,19 @@ async fn update_roles(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()
                 }
 
                 if let Err(serenity::Error::Http(_)) = member
-                    .remove_role(&cache.http, RoleId(*role.role() as u64))
+                    .remove_role(&cache.http, RoleId(role.role as u64))
                     .await
                 {
-                    if d.insert(role.role()) {
+                    if d.insert(role.role) {
                         log(
                         &format!(
                             "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
-                            role.role()
+                            role.role
                         ),
                         cache,
                     )
                     .await;
-                        database::delete_role_by_role(*role.role(), pool).await?;
+                        database::delete_role_by_role(role.role, pool).await?;
                     }
                 }
             }

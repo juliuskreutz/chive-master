@@ -40,8 +40,8 @@ pub async fn command(
     let role_ids = database::get_roles_by_guild(guild.0 as i64, pool)
         .await?
         .iter()
-        .filter(|rd| *rd.chives() >= 0)
-        .map(|rd| *rd.role() as u64)
+        .filter(|rd| rd.chives >= 0)
+        .map(|rd| rd.role as u64)
         .collect::<Vec<_>>();
 
     let mut members = guild.members(&ctx, None, None).await?;

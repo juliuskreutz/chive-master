@@ -66,7 +66,7 @@ pub async fn command(
     database::set_verification(&data, pool).await?;
 
     command
-        .create_followup_message(ctx, |m| response(m, data.otp()))
+        .create_followup_message(ctx, |m| response(m, &data.otp))
         .await?;
 
     Ok(())
@@ -121,7 +121,7 @@ pub async fn modal(
     database::set_verification(&data, pool).await?;
 
     interaction
-        .create_followup_message(ctx, |m| response(m, data.otp()))
+        .create_followup_message(ctx, |m| response(m, &data.otp))
         .await?;
 
     Ok(())

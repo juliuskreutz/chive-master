@@ -80,10 +80,10 @@ pub async fn autocomplete(
     let mut choices = Vec::new();
 
     for vd in vds {
-        let uid = vd.uid();
-        let user = vd.name();
+        let uid = vd.uid;
+        let user = vd.name;
 
-        choices.push((format!("{uid} - {user}"), *uid));
+        choices.push((format!("{uid} - {user}"), uid));
     }
 
     autocomplete

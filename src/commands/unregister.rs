@@ -51,7 +51,7 @@ pub async fn command(
         let roles = database::get_roles_by_guild(member.guild_id.0 as i64, pool).await?;
 
         for role in roles {
-            let _ = member.remove_role(&ctx, RoleId(*role.role() as u64)).await;
+            let _ = member.remove_role(&ctx, RoleId(role.role as u64)).await;
         }
     }
 

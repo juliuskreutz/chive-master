@@ -53,7 +53,7 @@ pub async fn command(
     let vd = database::get_verification_by_uid(uid, pool).await?;
     database::delete_verification_by_uid(uid, pool).await?;
 
-    let user = *vd.user();
+    let user = vd.user;
 
     let score_data = DbConnection { uid, user };
     database::set_score(&score_data, pool).await?;
@@ -86,10 +86,10 @@ pub async fn autocomplete(
     let mut choices = Vec::new();
 
     for vd in vds {
-        let uid = vd.uid();
-        let user = vd.name();
+        let uid = vd.uid;
+        let user = vd.name;
 
-        choices.push((format!("{uid} - {user}"), *uid));
+        choices.push((format!("{uid} - {user}"), uid));
     }
 
     autocomplete

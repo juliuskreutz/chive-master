@@ -1,12 +1,10 @@
 use anyhow::Result;
-use derive_getters::Getters;
 use sqlx::SqlitePool;
 
-#[derive(Getters)]
 pub struct RoleData {
-    role: i64,
-    chives: i64,
-    guild: i64,
+    pub role: i64,
+    pub chives: i64,
+    pub guild: i64,
 }
 
 impl RoleData {

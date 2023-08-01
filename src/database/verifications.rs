@@ -1,13 +1,11 @@
 use anyhow::Result;
-use derive_getters::Getters;
 use sqlx::SqlitePool;
 
-#[derive(Getters)]
 pub struct VerificationData {
-    uid: i64,
-    user: i64,
-    name: String,
-    otp: String,
+    pub uid: i64,
+    pub user: i64,
+    pub name: String,
+    pub otp: String,
 }
 
 impl VerificationData {

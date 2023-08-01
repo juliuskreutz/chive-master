@@ -39,8 +39,8 @@ pub async fn command(
 
                 for verification in verifications {
                     e = e.field(
-                        verification.uid(),
-                        format!("Code: **{}**", verification.otp()),
+                        verification.uid,
+                        format!("Code: **{}**", verification.otp),
                         false,
                     );
                 }
