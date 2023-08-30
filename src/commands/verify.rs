@@ -9,6 +9,7 @@ use serenity::{
                 autocomplete::AutocompleteInteraction,
                 InteractionResponseType,
             },
+            UserId,
         },
         Permissions,
     },
@@ -56,7 +57,15 @@ pub async fn command(
     let user = vd.user;
 
     let score_data = DbConnection { uid, user };
-    database::set_score(&score_data, pool).await?;
+    database::set_connection(&score_data, pool).await?;
+
+    if let Ok(channel) = UserId(user as u64).create_dm_channel(&ctx).await {
+        let _ = channel
+            .send_message(&ctx, |m| {
+                m.content("Congratulations Completionist! You are now @Chive Verified and your profile will appear on the Chive Leaderboards: https://stardb.gg/leaderboard. You can change your HSR bio back to what it was originally. Additionally, you've gained access to the https://discord.com/channels/1008493665116758167/1108110331043123200 channel.")
+            })
+            .await;
+    }
 
     command
         .create_followup_message(ctx, |m| {

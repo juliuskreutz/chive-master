@@ -2,20 +2,20 @@ use anyhow::Result;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-pub struct ScoreAchivement {
+pub struct ScoreAchievement {
     pub global_rank: usize,
     pub achievement_count: i64,
     pub name: String,
     pub signature: String,
 }
 
-pub async fn get(uid: i64) -> Result<ScoreAchivement> {
+pub async fn get(uid: i64) -> Result<ScoreAchievement> {
     Ok(
         if let Ok(score) = reqwest::get(&format!(
             "http://localhost:8000/api/scores/achievements/{uid}"
         ))
         .await?
-        .json::<ScoreAchivement>()
+        .json::<ScoreAchievement>()
         .await
         {
             score
@@ -25,14 +25,10 @@ pub async fn get(uid: i64) -> Result<ScoreAchivement> {
                     "http://localhost:8000/api/scores/achievements/{uid}"
                 ))
                 .send()
-                .await?;
-
-            reqwest::get(&format!(
-                "http://localhost:8000/api/scores/achievements/{uid}"
-            ))
-            .await?
-            .json::<ScoreAchivement>()
-            .await?
+                .await?
+                .json::<ScoreAchievement>()
+                .await
+                .map_err(|e| anyhow::anyhow!("{e}: {uid}"))?
         },
     )
 }

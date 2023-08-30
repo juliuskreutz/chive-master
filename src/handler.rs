@@ -46,6 +46,12 @@ impl Handler {
             commands::rolestats::NAME => {
                 commands::rolestats::command(ctx, command, &self.pool).await
             }
+            commands::submitship::NAME => {
+                commands::submitship::command(ctx, command, &self.pool).await
+            }
+            commands::shipstats::NAME => {
+                commands::shipstats::command(ctx, command, &self.pool).await
+            }
             //FIXME: Temporary
             dialogues::NAME => dialogues::command(ctx, command).await,
             _ => Ok(()),
@@ -88,6 +94,9 @@ impl Handler {
             commands::cancel::NAME => {
                 commands::cancel::autocomplete(ctx, autocomplete, &self.pool).await
             }
+            commands::submitship::NAME => {
+                commands::submitship::autocomplete(ctx, autocomplete).await
+            }
             _ => Ok(()),
         }
     }
@@ -109,6 +118,8 @@ impl EventHandler for Handler {
                 .create_application_command(|command| commands::role::register(command))
                 .create_application_command(|command| commands::channel::register(command))
                 .create_application_command(|command| commands::rolestats::register(command))
+                .create_application_command(|command| commands::submitship::register(command))
+                .create_application_command(|command| commands::shipstats::register(command))
                 //FIXME: Temporary
                 .create_application_command(|command| dialogues::register(command))
         })

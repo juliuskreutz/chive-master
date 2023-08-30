@@ -45,7 +45,7 @@ pub async fn command(
         return Err(anyhow!("This uid is not connected to your account"));
     }
 
-    database::delete_score_by_uid(uid, pool).await?;
+    database::delete_connection_by_uid(uid, pool).await?;
 
     if let Some(mut member) = command.member.clone() {
         let roles = database::get_roles_by_guild(member.guild_id.0 as i64, pool).await?;

@@ -6,6 +6,8 @@ pub mod register;
 pub mod role;
 pub mod roles;
 pub mod rolestats;
+pub mod shipstats;
 pub mod status;
+pub mod submitship;
 pub mod unregister;
 pub mod verify;

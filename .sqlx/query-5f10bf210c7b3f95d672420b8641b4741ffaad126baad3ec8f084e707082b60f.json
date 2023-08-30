@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "DELETE FROM scores WHERE uid = ?1",
+  "query": "DELETE FROM connections WHERE uid = ?1",
   "describe": {
     "columns": [],
     "parameters": {
@@ -8,5 +8,5 @@
     },
     "nullable": []
   },
-  "hash": "342a69450c240d49efa37437cd341e33a7ce7ddd95942d1577fbbedcdef465e5"
+  "hash": "5f10bf210c7b3f95d672420b8641b4741ffaad126baad3ec8f084e707082b60f"
 }

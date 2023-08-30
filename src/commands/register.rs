@@ -17,7 +17,10 @@ use serenity::{
 };
 use sqlx::SqlitePool;
 
-use crate::database::{self, VerificationData};
+use crate::{
+    database::{self, VerificationData},
+    stardb,
+};
 
 pub const NAME: &str = "register";
 const UID_ID: &str = "uid";
@@ -43,7 +46,7 @@ pub async fn command(
         return Err(anyhow!("Not an integer"));
     };
 
-    if let Ok(score_data) = database::get_score_by_uid(uid, pool).await {
+    if let Ok(score_data) = database::get_connection_by_uid(uid, pool).await {
         return Err(anyhow!(
             "Already registered to {}",
             UserId(score_data.user as u64).mention()
@@ -55,6 +58,10 @@ pub async fn command(
             "Awaiting verification. Check verification status with /status."
         ));
     };
+
+    if stardb::get(uid).await.is_err() {
+        return Err(anyhow!("This uid does not exist or our api is down"));
+    }
 
     let user = &command.user;
     let user_id = user.id.0 as i64;
@@ -98,7 +105,7 @@ pub async fn modal(
         .value
         .parse()?;
 
-    if let Ok(score_data) = database::get_score_by_uid(uid, pool).await {
+    if let Ok(score_data) = database::get_connection_by_uid(uid, pool).await {
         return Err(anyhow!(
             "Already registered to {}",
             UserId(score_data.user as u64).mention()
@@ -110,6 +117,10 @@ pub async fn modal(
             "Awaiting verification. Check verification status with /status."
         ));
     };
+
+    if stardb::get(uid).await.is_err() {
+        return Err(anyhow!("This uid does not exist or our api is down"));
+    }
 
     let user = &interaction.user;
     let user_id = user.id.0 as i64;
@@ -179,15 +190,12 @@ fn response<'a, 'b>(
 }
 
 fn otp() -> String {
-    loop {
-        let otp: String = rand::thread_rng()
-            .sample_iter(&Alphanumeric)
-            .take(6)
-            .map(char::from)
-            .collect();
+    let disallowed = ['I', 'l', 'O', '0'];
 
-        if !otp.to_lowercase().contains("gay") {
-            break otp;
-        }
-    }
+    rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .filter(|&c| !disallowed.contains(&(c as char)))
+        .take(6)
+        .map(char::from)
+        .collect()
 }

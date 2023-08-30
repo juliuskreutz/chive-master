@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT ship, COUNT(*) votes FROM ships GROUP BY ship ORDER BY votes DESC",
+  "describe": {
+    "columns": [
+      {
+        "name": "ship",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "votes",
+        "ordinal": 1,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "e7264a8fcf007ed545e57e3e80bc7882afc0243e969c060582a1a1b5f8b4cca9"
+}

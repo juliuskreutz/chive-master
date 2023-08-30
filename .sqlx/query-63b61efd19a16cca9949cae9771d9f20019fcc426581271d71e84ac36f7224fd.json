@@ -1,11 +1,16 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT uid FROM scores",
+  "query": "SELECT * FROM connections",
   "describe": {
     "columns": [
       {
         "name": "uid",
         "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "user",
+        "ordinal": 1,
         "type_info": "Int64"
       }
     ],
@@ -13,8 +18,9 @@
       "Right": 0
     },
     "nullable": [
+      false,
       false
     ]
   },
-  "hash": "875ca3168e7f6ee1f99b3579c38975a43bbd85358067069f6b8190168d21da0b"
+  "hash": "63b61efd19a16cca9949cae9771d9f20019fcc426581271d71e84ac36f7224fd"
 }

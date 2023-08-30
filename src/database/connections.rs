@@ -12,7 +12,7 @@ pub async fn get_connections(pool: &SqlitePool) -> Result<Vec<DbConnection>> {
         .await?)
 }
 
-pub async fn get_score_by_uid(uid: i64, pool: &SqlitePool) -> Result<DbConnection> {
+pub async fn get_connection_by_uid(uid: i64, pool: &SqlitePool) -> Result<DbConnection> {
     Ok(sqlx::query_as!(
         DbConnection,
         "SELECT * FROM connections WHERE uid == ?1",
@@ -30,7 +30,7 @@ pub async fn get_uids(pool: &SqlitePool) -> Result<Vec<i64>> {
         .collect())
 }
 
-pub async fn set_score(data: &DbConnection, pool: &SqlitePool) -> Result<()> {
+pub async fn set_connection(data: &DbConnection, pool: &SqlitePool) -> Result<()> {
     sqlx::query!(
         "INSERT OR REPLACE INTO connections(uid, user) VALUES(?, ?)",
         data.uid,
@@ -42,7 +42,7 @@ pub async fn set_score(data: &DbConnection, pool: &SqlitePool) -> Result<()> {
     Ok(())
 }
 
-pub async fn delete_score_by_uid(uid: i64, pool: &SqlitePool) -> Result<()> {
+pub async fn delete_connection_by_uid(uid: i64, pool: &SqlitePool) -> Result<()> {
     sqlx::query!("DELETE FROM connections WHERE uid = ?1", uid)
         .execute(pool)
         .await?;

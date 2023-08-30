@@ -18,59 +18,68 @@ use crate::{
 
 pub fn init(cache: Arc<CacheAndHttp>, pool: SqlitePool) {
     tokio::spawn(async move {
-        let minutes = 10;
-
-        let mut timer = tokio::time::interval(Duration::from_secs(60 * minutes));
-
         loop {
-            timer.tick().await;
+            let cache = cache.clone();
+            let pool = pool.clone();
 
-            let now = Instant::now();
-            if let Err(e) = update_verifications(&cache, &pool).await {
-                log(
-                    &format!("Error: Verifications {} <@246684413075652612>", e),
-                    &cache,
-                )
-                .await;
-            }
-            log(
-                &format!(
-                    "Updated verifications in {} seconds",
-                    now.elapsed().as_secs()
-                ),
-                &cache,
-            )
-            .await;
+            let task = tokio::spawn(async move {
+                let minutes = 10;
 
-            let now = Instant::now();
-            if let Err(e) = update_leaderboard(&cache, &pool).await {
-                log(
-                    &format!("Error: Leaderboard {} <@246684413075652612>", e),
-                    &cache,
-                )
-                .await;
-            }
-            log(
-                &format!("Updated leaderboard in {} seconds", now.elapsed().as_secs()),
-                &cache,
-            )
-            .await;
+                let mut timer = tokio::time::interval(Duration::from_secs(60 * minutes));
 
-            let now = Instant::now();
-            if let Err(e) = update_roles(&cache, &pool).await {
-                log(&format!("Error: Roles {} <@246684413075652612>", e), &cache).await;
-            }
-            log(
-                &format!("Updated roles in {} seconds", now.elapsed().as_secs()),
-                &cache,
-            )
-            .await;
+                loop {
+                    timer.tick().await;
 
-            log(
-                &format!("Completed update. Next update in {}min", minutes),
-                &cache,
-            )
-            .await;
+                    let now = Instant::now();
+                    if let Err(e) = update_verifications(&cache, &pool).await {
+                        log(
+                            &format!("Error: Verifications {} <@246684413075652612>", e),
+                            &cache,
+                        )
+                        .await;
+                    }
+                    log(
+                        &format!(
+                            "Updated verifications in {} seconds",
+                            now.elapsed().as_secs()
+                        ),
+                        &cache,
+                    )
+                    .await;
+
+                    let now = Instant::now();
+                    if let Err(e) = update_leaderboard(&cache, &pool).await {
+                        log(
+                            &format!("Error: Leaderboard {} <@246684413075652612>", e),
+                            &cache,
+                        )
+                        .await;
+                    }
+                    log(
+                        &format!("Updated leaderboard in {} seconds", now.elapsed().as_secs()),
+                        &cache,
+                    )
+                    .await;
+
+                    let now = Instant::now();
+                    if let Err(e) = update_roles(&cache, &pool).await {
+                        log(&format!("Error: Roles {} <@246684413075652612>", e), &cache).await;
+                    }
+                    log(
+                        &format!("Updated roles in {} seconds", now.elapsed().as_secs()),
+                        &cache,
+                    )
+                    .await;
+
+                    log(
+                        &format!("Completed update. Next update in {}min", minutes),
+                        &cache,
+                    )
+                    .await;
+                }
+            });
+
+            let _ = task.await;
         }
     });
 }
@@ -91,12 +100,12 @@ async fn update_verifications(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> R
         let user = verification_data.user;
 
         let score_data = DbConnection { uid, user };
-        database::set_score(&score_data, pool).await?;
+        database::set_connection(&score_data, pool).await?;
 
         if let Ok(channel) = UserId(user as u64).create_dm_channel(&cache).await {
             let _ = channel
                 .send_message(&cache.http, |m| {
-                    m.content("You are now verified! You can change your HSR bio back :D")
+                    m.content("Congratulations Completionist! You are now @Chive Verified and your profile will appear on the Chive Leaderboards: https://stardb.gg/leaderboard. You can change your HSR bio back to what it was originally. Additionally, you've gained access to the https://discord.com/channels/1008493665116758167/1108110331043123200 channel.")
                 })
                 .await;
         }
