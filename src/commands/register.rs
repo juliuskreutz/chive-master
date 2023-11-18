@@ -138,7 +138,11 @@ pub async fn modal(
     Ok(())
 }
 
-pub async fn component(ctx: &Context, interaction: &MessageComponentInteraction) -> Result<()> {
+pub async fn component(
+    ctx: &Context,
+    interaction: &MessageComponentInteraction,
+    _: &SqlitePool,
+) -> Result<()> {
     interaction
         .create_interaction_response(ctx, |r| {
             r.kind(InteractionResponseType::Modal)

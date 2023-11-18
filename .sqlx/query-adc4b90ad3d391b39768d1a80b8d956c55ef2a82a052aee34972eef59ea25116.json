@@ -1,15 +1,15 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT ship, COUNT(*) votes FROM ships GROUP BY ship ORDER BY votes DESC",
+  "query": "SELECT * FROM roles",
   "describe": {
     "columns": [
       {
-        "name": "ship",
+        "name": "role",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Int64"
       },
       {
-        "name": "votes",
+        "name": "chives",
         "ordinal": 1,
         "type_info": "Int64"
       }
@@ -22,5 +22,5 @@
       false
     ]
   },
-  "hash": "e7264a8fcf007ed545e57e3e80bc7882afc0243e969c060582a1a1b5f8b4cca9"
+  "hash": "adc4b90ad3d391b39768d1a80b8d956c55ef2a82a052aee34972eef59ea25116"
 }

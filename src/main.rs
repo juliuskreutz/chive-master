@@ -3,8 +3,6 @@ mod database;
 mod handler;
 mod stardb;
 mod updater;
-//FIXME: Temporary
-mod dialogues;
 
 use std::{env, str::FromStr};
 
@@ -39,9 +37,6 @@ async fn main() -> Result<()> {
     };
 
     updater::init(client.cache_and_http.clone(), pool);
-
-    // //FIXME: Temporary
-    dialogues::init(&client).await?;
 
     client.start().await?;
 

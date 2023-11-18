@@ -1,20 +1,20 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT * FROM roles WHERE guild == ?1",
+  "query": "SELECT * FROM matches WHERE channel = ?",
   "describe": {
     "columns": [
       {
-        "name": "role",
+        "name": "channel",
         "ordinal": 0,
         "type_info": "Int64"
       },
       {
-        "name": "chives",
+        "name": "user1",
         "ordinal": 1,
         "type_info": "Int64"
       },
       {
-        "name": "guild",
+        "name": "user2",
         "ordinal": 2,
         "type_info": "Int64"
       }
@@ -28,5 +28,5 @@
       false
     ]
   },
-  "hash": "b15fbbb447f52279389dcf63ec005655ef4e65c8a6b08689bfa93162b5651576"
+  "hash": "001ea46b27806eca70c09a49d25315f5ec9e769386f12e51046b1b9e341c6c8f"
 }

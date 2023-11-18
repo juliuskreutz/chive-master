@@ -97,9 +97,8 @@ async fn set(
     };
 
     let role_id = role.id.0 as i64;
-    let guild = command.guild_id.ok_or_else(|| anyhow!("No option"))?.0 as i64;
 
-    let data = RoleData::new(role_id, chives, guild);
+    let data = RoleData::new(role_id, chives);
 
     database::set_role(&data, pool).await?;
 

@@ -6,77 +6,112 @@ use std::{
 
 use anyhow::Result;
 use serenity::{
-    model::prelude::{ChannelId, GuildId, RoleId, UserId},
+    http::Http,
+    model::{
+        prelude::{
+            ChannelId, ChannelType, GuildId, Member, PermissionOverwrite, PermissionOverwriteType,
+            RoleId, UserId,
+        },
+        Permissions,
+    },
     CacheAndHttp,
 };
 use sqlx::SqlitePool;
+use tokio::time;
 
 use crate::{
-    database::{self, DbConnection, RoleData},
+    database::{self, DbConnection, DbMatch},
     stardb,
 };
 
+const GUILD_ID: GuildId = GuildId(1008493665116758167);
+
 pub fn init(cache: Arc<CacheAndHttp>, pool: SqlitePool) {
+    {
+        let cache = cache.clone();
+        let pool = pool.clone();
+        tokio::spawn(async move {
+            loop {
+                let cache = cache.clone();
+                let pool = pool.clone();
+
+                let task = tokio::spawn(async move {
+                    let mut timer = time::interval(Duration::from_secs(5 * 60));
+
+                    loop {
+                        timer.tick().await;
+
+                        let now = Instant::now();
+                        if let Err(e) = update_verifications(&cache, &pool).await {
+                            log(
+                                &format!("Error: Verifications {} <@246684413075652612>", e),
+                                &cache.http,
+                            )
+                            .await;
+                        }
+                        log(
+                            &format!(
+                                "Updated verifications in {} seconds",
+                                now.elapsed().as_secs()
+                            ),
+                            &cache.http,
+                        )
+                        .await;
+
+                        let now = Instant::now();
+                        if let Err(e) = update_leaderboard(&cache, &pool).await {
+                            log(
+                                &format!("Error: Leaderboard {} <@246684413075652612>", e),
+                                &cache.http,
+                            )
+                            .await;
+                        }
+                        log(
+                            &format!("Updated leaderboard in {} seconds", now.elapsed().as_secs()),
+                            &cache.http,
+                        )
+                        .await;
+
+                        let now = Instant::now();
+                        if let Err(e) = update_matches(&cache, &pool).await {
+                            log(
+                                &format!("Error: Matches {} <@246684413075652612>", e),
+                                &cache.http,
+                            )
+                            .await;
+                        }
+                        log(
+                            &format!("Updated matches in {} seconds", now.elapsed().as_secs()),
+                            &cache.http,
+                        )
+                        .await;
+                    }
+                });
+
+                let _ = task.await;
+            }
+        });
+    }
+
     tokio::spawn(async move {
         loop {
             let cache = cache.clone();
             let pool = pool.clone();
 
             let task = tokio::spawn(async move {
-                let minutes = 10;
-
-                let mut timer = tokio::time::interval(Duration::from_secs(60 * minutes));
-
-                loop {
-                    timer.tick().await;
-
-                    let now = Instant::now();
-                    if let Err(e) = update_verifications(&cache, &pool).await {
-                        log(
-                            &format!("Error: Verifications {} <@246684413075652612>", e),
-                            &cache,
-                        )
-                        .await;
-                    }
+                let now = Instant::now();
+                if let Err(e) = update_roles(&cache, &pool).await {
                     log(
-                        &format!(
-                            "Updated verifications in {} seconds",
-                            now.elapsed().as_secs()
-                        ),
-                        &cache,
-                    )
-                    .await;
-
-                    let now = Instant::now();
-                    if let Err(e) = update_leaderboard(&cache, &pool).await {
-                        log(
-                            &format!("Error: Leaderboard {} <@246684413075652612>", e),
-                            &cache,
-                        )
-                        .await;
-                    }
-                    log(
-                        &format!("Updated leaderboard in {} seconds", now.elapsed().as_secs()),
-                        &cache,
-                    )
-                    .await;
-
-                    let now = Instant::now();
-                    if let Err(e) = update_roles(&cache, &pool).await {
-                        log(&format!("Error: Roles {} <@246684413075652612>", e), &cache).await;
-                    }
-                    log(
-                        &format!("Updated roles in {} seconds", now.elapsed().as_secs()),
-                        &cache,
-                    )
-                    .await;
-
-                    log(
-                        &format!("Completed update. Next update in {}min", minutes),
-                        &cache,
+                        &format!("Error: Roles {} <@246684413075652612>", e),
+                        &cache.http,
                     )
                     .await;
                 }
+                log(
+                    &format!("Updated roles in {} seconds", now.elapsed().as_secs()),
+                    &cache.http,
+                )
+                .await;
             });
 
             let _ = task.await;
@@ -89,9 +124,9 @@ async fn update_verifications(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> R
     for verification_data in verifications {
         let uid = verification_data.uid;
 
-        let api_data = stardb::get(uid).await?;
+        let score = stardb::put(uid).await?;
 
-        if !api_data.signature.ends_with(&verification_data.otp) {
+        if !score.signature.ends_with(&verification_data.otp) {
             continue;
         }
 
@@ -101,6 +136,29 @@ async fn update_verifications(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> R
 
         let score_data = DbConnection { uid, user };
         database::set_connection(&score_data, pool).await?;
+
+        let roles = database::get_roles_order_by_chives_desc(pool).await?;
+        let mut d = HashSet::new();
+
+        if let Ok(mut member) = GUILD_ID.member(&cache, user as u64).await {
+            if let Some(role_add) = roles.iter().find(|r| score.achievement_count >= r.chives) {
+                add_member_role(&mut member, role_add.role, &mut d, &cache.http, pool).await?;
+
+                for role in &roles {
+                    if role.role == role_add.role {
+                        continue;
+                    }
+
+                    if role.chives < 0 {
+                        add_member_role(&mut member, role.role, &mut d, &cache.http, pool).await?;
+
+                        continue;
+                    }
+
+                    remove_member_role(&mut member, role.role, &mut d, &cache.http, pool).await?;
+                }
+            }
+        }
 
         if let Ok(channel) = UserId(user as u64).create_dm_channel(&cache).await {
             let _ = channel
@@ -174,7 +232,7 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
                     "Error: Channel <#{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
                     channel.channel
                 ),
-                cache,
+                &cache.http,
             )
             .await;
 
@@ -199,107 +257,249 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
 async fn update_roles(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()> {
     let roles = database::get_roles_order_by_chives_desc(pool).await?;
 
-    let mut guild_roles: HashMap<_, Vec<RoleData>> = HashMap::new();
-
-    for role in roles {
-        guild_roles.entry(role.guild).or_default().push(role);
-    }
-
-    let mut c = HashSet::new();
+    let mut c = HashMap::new();
     let mut d = HashSet::new();
 
     let scores = database::get_connections(pool).await?;
     for score in scores {
-        for (&guild, roles) in &guild_roles {
-            let uid = score.uid;
-            let user = score.user;
+        let uid = score.uid;
+        let user = score.user;
 
-            let key = (guild, user);
-            if c.contains(&key) {
+        let score = stardb::get(uid).await?;
+
+        if c.get(&user)
+            .map(|&ac| ac > score.achievement_count)
+            .unwrap_or_default()
+        {
+            continue;
+        }
+
+        c.insert(user, score.achievement_count);
+
+        let Ok(mut member) = GUILD_ID.member(&cache, user as u64).await else {
+            continue;
+        };
+
+        let Some(role_add) = roles.iter().find(|r| score.achievement_count >= r.chives) else {
+            continue;
+        };
+
+        add_member_role(&mut member, role_add.role, &mut d, &cache.http, pool).await?;
+
+        for role in &roles {
+            if role.role == role_add.role {
                 continue;
             }
-            c.insert(key);
 
-            let Ok(mut member) = GuildId(guild as u64).member(&cache, user as u64).await else {
+            if role.chives < 0 {
+                add_member_role(&mut member, role.role, &mut d, &cache.http, pool).await?;
+
                 continue;
-            };
-
-            let score = stardb::get(uid).await?;
-
-            let Some(role_add) = roles.iter().find(|r| score.achievement_count >= r.chives) else {
-                continue;
-            };
-
-            if let Err(serenity::Error::Http(_)) = member
-                .add_role(&cache.http, RoleId(role_add.role as u64))
-                .await
-            {
-                if d.insert(role_add.role) {
-                    log(
-                        &format!(
-                            "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
-                            role_add.role
-                        ),
-                        cache,
-                    )
-                    .await;
-
-                    database::delete_role_by_role(role_add.role, pool).await?;
-                }
             }
 
-            for role in &guild_roles[&guild] {
-                if role.role == role_add.role {
-                    continue;
-                }
-
-                if role.chives < 0 {
-                    if let Err(serenity::Error::Http(_)) =
-                        member.add_role(&cache.http, RoleId(role.role as u64)).await
-                    {
-                        if d.insert(role.role) {
-                            log(
-                            &format!(
-                                "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
-                                role.role
-                            ),
-                            cache,
-                        )
-                        .await;
-
-                            database::delete_role_by_role(role.role, pool).await?;
-                        }
-                    }
-
-                    continue;
-                }
-
-                if let Err(serenity::Error::Http(_)) = member
-                    .remove_role(&cache.http, RoleId(role.role as u64))
-                    .await
-                {
-                    if d.insert(role.role) {
-                        log(
-                        &format!(
-                            "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
-                            role.role
-                        ),
-                        cache,
-                    )
-                    .await;
-                        database::delete_role_by_role(role.role, pool).await?;
-                    }
-                }
-            }
+            remove_member_role(&mut member, role.role, &mut d, &cache.http, pool).await?;
         }
     }
 
     Ok(())
 }
 
-pub async fn log(content: &str, cache: &Arc<CacheAndHttp>) {
+pub async fn add_member_role(
+    member: &mut Member,
+    role: i64,
+    d: &mut HashSet<i64>,
+    http: &Arc<Http>,
+    pool: &SqlitePool,
+) -> Result<()> {
+    if let Err(serenity::Error::Http(_)) = member.add_role(&http, RoleId(role as u64)).await {
+        if d.insert(role) {
+            log(
+                        &format!(
+                            "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
+                            role
+                        ),
+                        http,
+                    )
+                    .await;
+
+            database::delete_role_by_role(role, pool).await?;
+        }
+    }
+
+    Ok(())
+}
+
+pub async fn remove_member_role(
+    member: &mut Member,
+    role: i64,
+    d: &mut HashSet<i64>,
+    http: &Arc<Http>,
+    pool: &SqlitePool,
+) -> Result<()> {
+    if let Err(serenity::Error::Http(_)) = member.remove_role(&http, RoleId(role as u64)).await {
+        if d.insert(role) {
+            log(
+                        &format!(
+                            "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
+                            role
+                        ),
+                        http,
+                    )
+                    .await;
+
+            database::delete_role_by_role(role, pool).await?;
+        }
+    }
+
+    Ok(())
+}
+
+async fn update_matches(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()> {
+    let candidates = database::get_candidates(pool).await?;
+
+    let mut c = HashSet::new();
+
+    for candidate in &candidates {
+        let user1 = candidate.user;
+
+        if c.contains(&user1) {
+            continue;
+        }
+
+        c.insert(user1);
+
+        let connections1 = database::get_connections_by_user(user1, pool).await?;
+
+        let user2 = {
+            let mut o = None;
+
+            for candidate in &candidates {
+                let user2 = candidate.user;
+
+                if c.contains(&user2) {
+                    continue;
+                }
+
+                let connections2 = database::get_connections_by_user(user2, pool).await?;
+
+                if connections1.iter().any(|c1| {
+                    connections2
+                        .iter()
+                        .any(|c2| c1.uid / 100000000 == c2.uid / 100000000)
+                }) {
+                    o = Some(user2);
+                    break;
+                }
+            }
+
+            if let Some(user2) = o {
+                user2
+            } else {
+                continue;
+            }
+        };
+
+        c.insert(user2);
+
+        let permissions = vec![
+            PermissionOverwrite {
+                allow: Permissions::empty(),
+                deny: Permissions::VIEW_CHANNEL,
+                kind: PermissionOverwriteType::Role(RoleId(1008493665116758167)),
+            },
+            PermissionOverwrite {
+                allow: Permissions::VIEW_CHANNEL,
+                deny: Permissions::empty(),
+                kind: PermissionOverwriteType::Member(UserId(user1 as u64)),
+            },
+            PermissionOverwrite {
+                allow: Permissions::VIEW_CHANNEL,
+                deny: Permissions::empty(),
+                kind: PermissionOverwriteType::Member(UserId(user2 as u64)),
+            },
+        ];
+
+        let name1 = UserId(user1 as u64).to_user(&cache.http).await?.name;
+        let name2 = UserId(user2 as u64).to_user(&cache.http).await?.name;
+
+        let channels = GUILD_ID.channels(&cache.http).await?;
+
+        let mut matches_categories = Vec::new();
+
+        for channel in channels.values() {
+            if channel.kind == ChannelType::Category && channel.name == "💕 [matches] 💕" {
+                matches_categories.push(channel.id.0);
+            }
+        }
+
+        let mut channel = None;
+
+        for category in matches_categories {
+            if let Ok(ch) = GUILD_ID
+                .create_channel(&cache.http, |c| {
+                    c.name(format!("{name1} x {name2}"))
+                        .category(category)
+                        .permissions(permissions.clone())
+                })
+                .await
+            {
+                channel = Some(ch);
+                break;
+            }
+        }
+
+        if channel.is_none() {
+            let category = GUILD_ID
+                .create_channel(&cache.http, |c| {
+                    c.name("💕 [matches] 💕").kind(ChannelType::Category)
+                })
+                .await?;
+
+            channel = Some(
+                GUILD_ID
+                    .create_channel(&cache.http, |c| {
+                        c.name(format!("{name1} x {name2}"))
+                            .category(category)
+                            .permissions(permissions)
+                    })
+                    .await?,
+            );
+        }
+
+        let channel = channel.unwrap();
+
+        let db_match = DbMatch {
+            channel: channel.id.0 as i64,
+            user1,
+            user2,
+        };
+
+        database::set_match(&db_match, pool).await?;
+
+        let text = format!("
+<@{user1}> <@{user2}>
+Amazing! Your support contractor has been found. Please use this channel to
+1. Add each other to friend list
+2. Agree on which support unit to provide to the other
+3. Ensure you know the two correct ways to give credits to each other by reading the guide https://stardb.gg/articles/how-to-get-credits-from-supports/
+4. Agree on assisting each other 10 times per day or unless otherwise agreed upon
+5. If one party is unresponsive for more than 24hrs, then ping a staff member and we can unmatch you
+");
+
+        channel
+            .send_message(&cache.http, |m| m.content(text))
+            .await?;
+
+        database::delete_candidate_by_user(user1, pool).await?;
+        database::delete_candidate_by_user(user2, pool).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn log(content: &str, http: &Arc<Http>) {
     ChannelId(1119634729377992774)
-        .send_message(&cache.http, |m| m.content(content))
+        .send_message(&http, |m| m.content(content))
         .await
         .unwrap();
 }

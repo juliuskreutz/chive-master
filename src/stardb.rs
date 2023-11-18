@@ -32,3 +32,15 @@ pub async fn get(uid: i64) -> Result<ScoreAchievement> {
         },
     )
 }
+
+pub async fn put(uid: i64) -> Result<ScoreAchievement> {
+    reqwest::Client::new()
+        .put(&format!(
+            "http://localhost:8000/api/scores/achievements/{uid}"
+        ))
+        .send()
+        .await?
+        .json::<ScoreAchievement>()
+        .await
+        .map_err(|e| anyhow::anyhow!("{e}: {uid}"))
+}

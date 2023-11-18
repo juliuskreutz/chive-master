@@ -18,7 +18,7 @@ use serenity::{
 };
 use sqlx::SqlitePool;
 
-use crate::{commands, dialogues};
+use crate::commands;
 
 pub struct Handler {
     pub pool: SqlitePool,
@@ -46,14 +46,16 @@ impl Handler {
             commands::rolestats::NAME => {
                 commands::rolestats::command(ctx, command, &self.pool).await
             }
-            commands::submitship::NAME => {
-                commands::submitship::command(ctx, command, &self.pool).await
-            }
-            commands::shipstats::NAME => {
-                commands::shipstats::command(ctx, command, &self.pool).await
-            }
-            //FIXME: Temporary
-            dialogues::NAME => dialogues::command(ctx, command).await,
+            commands::apply::NAME => commands::apply::command(ctx, command, &self.pool).await,
+            commands::unapply::NAME => commands::unapply::command(ctx, command, &self.pool).await,
+            commands::disband::NAME => commands::disband::command(ctx, command, &self.pool).await,
+            commands::uids::NAME => commands::uids::command(ctx, command, &self.pool).await,
+            // commands::submitship::NAME => {
+            //     commands::submitship::command(ctx, command, &self.pool).await
+            // }
+            // commands::shipstats::NAME => {
+            //     commands::shipstats::command(ctx, command, &self.pool).await
+            // }
             _ => Ok(()),
         }
     }
@@ -64,7 +66,13 @@ impl Handler {
         interaction: &MessageComponentInteraction,
     ) -> Result<()> {
         match interaction.data.custom_id.as_str() {
-            commands::register::NAME => commands::register::component(ctx, interaction).await,
+            commands::register::NAME => {
+                commands::register::component(ctx, interaction, &self.pool).await
+            }
+            commands::apply::NAME => commands::apply::component(ctx, interaction, &self.pool).await,
+            commands::unapply::NAME => {
+                commands::unapply::component(ctx, interaction, &self.pool).await
+            }
             _ => Ok(()),
         }
     }
@@ -94,9 +102,9 @@ impl Handler {
             commands::cancel::NAME => {
                 commands::cancel::autocomplete(ctx, autocomplete, &self.pool).await
             }
-            commands::submitship::NAME => {
-                commands::submitship::autocomplete(ctx, autocomplete).await
-            }
+            // commands::submitship::NAME => {
+            //     commands::submitship::autocomplete(ctx, autocomplete).await
+            // }
             _ => Ok(()),
         }
     }
@@ -118,10 +126,12 @@ impl EventHandler for Handler {
                 .create_application_command(|command| commands::role::register(command))
                 .create_application_command(|command| commands::channel::register(command))
                 .create_application_command(|command| commands::rolestats::register(command))
-                .create_application_command(|command| commands::submitship::register(command))
-                .create_application_command(|command| commands::shipstats::register(command))
-                //FIXME: Temporary
-                .create_application_command(|command| dialogues::register(command))
+                .create_application_command(|command| commands::apply::register(command))
+                .create_application_command(|command| commands::unapply::register(command))
+                .create_application_command(|command| commands::disband::register(command))
+                .create_application_command(|command| commands::uids::register(command))
+            // .create_application_command(|command| commands::submitship::register(command))
+            // .create_application_command(|command| commands::shipstats::register(command))
         })
         .await
         .unwrap();
@@ -140,7 +150,12 @@ impl EventHandler for Handler {
                 }
             }
             Interaction::MessageComponent(interaction) => {
-                let _ = self.message_component(&ctx, &interaction).await;
+                if let Err(e) = self.message_component(&ctx, &interaction).await {
+                    interaction
+                        .create_followup_message(&ctx, |m| m.content(e).ephemeral(true))
+                        .await
+                        .unwrap();
+                }
             }
             Interaction::ModalSubmit(interaction) => {
                 if let Err(e) = self.modal_submit(&ctx, &interaction).await {

@@ -37,7 +37,7 @@ pub async fn command(
         return Err(anyhow!("This command needs to be used in a guild"));
     };
 
-    let role_ids = database::get_roles_by_guild(guild.0 as i64, pool)
+    let role_ids = database::get_roles(pool)
         .await?
         .iter()
         .filter(|rd| rd.chives >= 0)

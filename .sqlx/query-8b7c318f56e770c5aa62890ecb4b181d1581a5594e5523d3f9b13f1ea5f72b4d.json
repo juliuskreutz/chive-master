@@ -1,26 +1,26 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT * FROM roles ORDER BY chives DESC",
+  "query": "SELECT * FROM candidates WHERE user = ?",
   "describe": {
     "columns": [
       {
-        "name": "role",
+        "name": "user",
         "ordinal": 0,
         "type_info": "Int64"
       },
       {
-        "name": "chives",
+        "name": "timestamp",
         "ordinal": 1,
-        "type_info": "Int64"
+        "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       false,
       false
     ]
   },
-  "hash": "2f708a3ca3fd7cc3c8e8265a404c71cddb47afe7847297de23dff87d85e94e0b"
+  "hash": "8b7c318f56e770c5aa62890ecb4b181d1581a5594e5523d3f9b13f1ea5f72b4d"
 }
