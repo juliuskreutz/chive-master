@@ -21,7 +21,7 @@ use sqlx::SqlitePool;
 
 use crate::{
     database::{self, DbConnection},
-    stardb, updater,
+    updater,
 };
 
 pub const NAME: &str = "verify";
@@ -64,32 +64,7 @@ pub async fn command(
     let score_data = DbConnection { uid, user };
     database::set_connection(&score_data, pool).await?;
 
-    let roles = database::get_roles_order_by_chives_desc(pool).await?;
-    let mut d = HashSet::new();
-
-    if let Some(mut member) = command.member.clone() {
-        let score = stardb::get(vd.uid).await?;
-
-        if let Some(role_add) = roles.iter().find(|r| score.achievement_count >= r.chives) {
-            updater::add_member_role(&mut member, role_add.role, &mut d, &ctx.http, pool).await?;
-
-            for role in &roles {
-                if role.role == role_add.role {
-                    continue;
-                }
-
-                if role.chives < 0 {
-                    updater::add_member_role(&mut member, role.role, &mut d, &ctx.http, pool)
-                        .await?;
-
-                    continue;
-                }
-
-                updater::remove_member_role(&mut member, role.role, &mut d, &ctx.http, pool)
-                    .await?;
-            }
-        }
-    }
+    updater::update_user_roles(user, &mut HashSet::new(), &ctx.http, pool).await?;
 
     if let Ok(channel) = UserId(user as u64).create_dm_channel(&ctx).await {
         let _ = channel
@@ -117,7 +92,7 @@ pub async fn autocomplete(
     let input = autocomplete
         .data
         .options
-        .get(0)
+        .first()
         .and_then(|o| o.value.as_ref())
         .and_then(|o| o.as_str().map(|s| format!("{s}%")))
         .unwrap_or("%".to_string());

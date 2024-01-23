@@ -47,7 +47,7 @@ pub async fn command(
         })
         .await?;
 
-    let mut url = "https://stardb.gg/api/generate?".to_string();
+    let mut url = "https://hsr-profile-generator.vercel.app/api/generate?".to_string();
 
     let showuid = command
         .data

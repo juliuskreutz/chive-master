@@ -50,6 +50,7 @@ impl Handler {
             commands::unapply::NAME => commands::unapply::command(ctx, command, &self.pool).await,
             commands::disband::NAME => commands::disband::command(ctx, command, &self.pool).await,
             commands::uids::NAME => commands::uids::command(ctx, command, &self.pool).await,
+            commands::update::NAME => commands::update::command(ctx, command, &self.pool).await,
             // commands::submitship::NAME => {
             //     commands::submitship::command(ctx, command, &self.pool).await
             // }
@@ -130,6 +131,7 @@ impl EventHandler for Handler {
                 .create_application_command(|command| commands::unapply::register(command))
                 .create_application_command(|command| commands::disband::register(command))
                 .create_application_command(|command| commands::uids::register(command))
+                .create_application_command(|command| commands::update::register(command))
             // .create_application_command(|command| commands::submitship::register(command))
             // .create_application_command(|command| commands::shipstats::register(command))
         })

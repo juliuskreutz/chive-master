@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -122,6 +122,8 @@ pub fn init(cache: Arc<CacheAndHttp>, pool: SqlitePool) {
 async fn update_verifications(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()> {
     let verifications = database::get_verifications(pool).await?;
     for verification_data in verifications {
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
         let uid = verification_data.uid;
 
         let score = stardb::put(uid).await?;
@@ -208,7 +210,7 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
             .messages(&cache.http, |b| b.limit(2))
             .await
         {
-            if let Some(message) = messages.get(0) {
+            if let Some(message) = messages.first() {
                 let _ = message.delete(&cache).await;
             }
 
@@ -255,56 +257,85 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
 }
 
 async fn update_roles(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()> {
-    let roles = database::get_roles_order_by_chives_desc(pool).await?;
-
-    let mut c = HashMap::new();
     let mut d = HashSet::new();
 
-    let scores = database::get_connections(pool).await?;
-    for score in scores {
-        let uid = score.uid;
-        let user = score.user;
-
-        let score = stardb::get(uid).await?;
-
-        if c.get(&user)
-            .map(|&ac| ac > score.achievement_count)
-            .unwrap_or_default()
-        {
-            continue;
-        }
-
-        c.insert(user, score.achievement_count);
-
-        let Ok(mut member) = GUILD_ID.member(&cache, user as u64).await else {
-            continue;
-        };
-
-        let Some(role_add) = roles.iter().find(|r| score.achievement_count >= r.chives) else {
-            continue;
-        };
-
-        add_member_role(&mut member, role_add.role, &mut d, &cache.http, pool).await?;
-
-        for role in &roles {
-            if role.role == role_add.role {
-                continue;
-            }
-
-            if role.chives < 0 {
-                add_member_role(&mut member, role.role, &mut d, &cache.http, pool).await?;
-
-                continue;
-            }
-
-            remove_member_role(&mut member, role.role, &mut d, &cache.http, pool).await?;
-        }
+    let users = database::get_users(pool).await?;
+    for user in users {
+        update_user_roles(user, &mut d, &cache.http, pool).await?;
     }
 
     Ok(())
 }
 
-pub async fn add_member_role(
+pub async fn update_user_roles(
+    user: i64,
+    d: &mut HashSet<i64>,
+    http: &Arc<Http>,
+    pool: &SqlitePool,
+) -> Result<()> {
+    let Ok(mut member) = GUILD_ID.member(http, user as u64).await else {
+        return Ok(());
+    };
+
+    let connections = database::get_connections_by_user(user, pool).await?;
+
+    let mut score = stardb::get(connections[0].uid).await?;
+    for connection in connections.iter().skip(1) {
+        let s = stardb::get(connection.uid).await?;
+
+        if s.achievement_count > score.achievement_count {
+            score = s;
+        }
+    }
+
+    let roles = database::get_roles_order_by_chives_desc(pool).await?;
+
+    let Some(role_add) = roles.iter().find(|r| score.achievement_count >= r.chives) else {
+        return Ok(());
+    };
+
+    add_member_role(&mut member, role_add.role, d, http, pool).await?;
+
+    // FIX: TEMPORARY
+    let role_add_500 =
+        (score.achievement_count >= 500).then(|| roles.iter().find(|r| r.chives == 500).unwrap());
+    if let Some(role) = role_add_500 {
+        add_member_role(&mut member, role.role, d, http, pool).await?;
+    }
+
+    for role in &roles {
+        if role.role == role_add.role || Some(role.role) == role_add_500.map(|r| r.role) {
+            continue;
+        }
+
+        if role.chives < 0 {
+            add_member_role(&mut member, role.role, d, http, pool).await?;
+
+            continue;
+        }
+
+        remove_member_role(&mut member, role.role, d, http, pool).await?;
+    }
+    // FIX: TEMPORARY
+
+    // for role in &roles {
+    //     if role.role == role_add.role {
+    //         continue;
+    //     }
+    //
+    //     if role.chives < 0 {
+    //         add_member_role(&mut member, role.role, d, http, pool).await?;
+    //
+    //         continue;
+    //     }
+    //
+    //     remove_member_role(&mut member, role.role, d, http, pool).await?;
+    // }
+
+    Ok(())
+}
+
+async fn add_member_role(
     member: &mut Member,
     role: i64,
     d: &mut HashSet<i64>,
@@ -313,14 +344,7 @@ pub async fn add_member_role(
 ) -> Result<()> {
     if let Err(serenity::Error::Http(_)) = member.add_role(&http, RoleId(role as u64)).await {
         if d.insert(role) {
-            log(
-                        &format!(
-                            "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
-                            role
-                        ),
-                        http,
-                    )
-                    .await;
+            log(&format!( "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>", role), http) .await;
 
             database::delete_role_by_role(role, pool).await?;
         }
@@ -329,7 +353,7 @@ pub async fn add_member_role(
     Ok(())
 }
 
-pub async fn remove_member_role(
+async fn remove_member_role(
     member: &mut Member,
     role: i64,
     d: &mut HashSet<i64>,
@@ -338,14 +362,7 @@ pub async fn remove_member_role(
 ) -> Result<()> {
     if let Err(serenity::Error::Http(_)) = member.remove_role(&http, RoleId(role as u64)).await {
         if d.insert(role) {
-            log(
-                        &format!(
-                            "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>",
-                            role
-                        ),
-                        http,
-                    )
-                    .await;
+            log( &format!( "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>", role), http) .await;
 
             database::delete_role_by_role(role, pool).await?;
         }

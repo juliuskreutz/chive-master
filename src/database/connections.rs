@@ -6,10 +6,12 @@ pub struct DbConnection {
     pub user: i64,
 }
 
-pub async fn get_connections(pool: &SqlitePool) -> Result<Vec<DbConnection>> {
-    Ok(sqlx::query_as!(DbConnection, "SELECT * FROM connections")
+pub async fn get_users(pool: &SqlitePool) -> Result<Vec<i64>> {
+    Ok(sqlx::query!("SELECT DISTINCT user FROM connections")
         .fetch_all(pool)
-        .await?)
+        .await
+        .map(|r| r.into_iter().map(|r| r.user))?
+        .collect())
 }
 
 pub async fn get_connection_by_uid(uid: i64, pool: &SqlitePool) -> Result<DbConnection> {

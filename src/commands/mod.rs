@@ -10,6 +10,7 @@ pub mod roles;
 pub mod rolestats;
 pub mod uids;
 pub mod unapply;
+pub mod update;
 // pub mod shipstats;
 pub mod status;
 // pub mod submitship;

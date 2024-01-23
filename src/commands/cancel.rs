@@ -70,7 +70,7 @@ pub async fn autocomplete(
     let input = autocomplete
         .data
         .options
-        .get(0)
+        .first()
         .and_then(|o| o.value.as_ref())
         .and_then(|o| o.as_str().map(|s| format!("{s}%")))
         .unwrap_or("%".to_string());
