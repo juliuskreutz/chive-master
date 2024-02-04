@@ -46,6 +46,20 @@ pub async fn command(
         return Err(anyhow!("Not an integer"));
     };
 
+    if uid == 420 {
+        return Err(anyhow!("Try 69 next.."));
+    }
+
+    if uid == 69 {
+        return Err(anyhow!(
+            "Try the answer to life next.. (If you don't know it, just google it)"
+        ));
+    }
+
+    if uid == 42 {
+        return Err(anyhow!("Don't forget to stay hydrated! Next answer is 💧"));
+    }
+
     if let Ok(score_data) = database::get_connection_by_uid(uid, pool).await {
         return Err(anyhow!(
             "Already registered to {}",

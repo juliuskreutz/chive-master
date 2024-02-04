@@ -51,6 +51,12 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
                         .kind(CommandOptionType::Integer)
                         .required(true)
                 })
+                .create_sub_option(|so| {
+                    so.name("permanent")
+                        .description("Permanent")
+                        .kind(CommandOptionType::Boolean)
+                        .required(true)
+                })
         })
         .create_option(|o| {
             o.name("delete")
@@ -63,7 +69,7 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
                         .required(true)
                 })
         })
-        .default_member_permissions(Permissions::ADMINISTRATOR)
+        .default_member_permissions(Permissions::MANAGE_ROLES)
 }
 
 async fn set(
@@ -88,6 +94,11 @@ async fn set(
         .as_ref()
         .ok_or_else(|| anyhow!("No option"))?;
 
+    let permanent_option = command.data.options[0].options[2]
+        .resolved
+        .as_ref()
+        .ok_or_else(|| anyhow!("No option"))?;
+
     let CommandDataOptionValue::Role(role) = role_option else {
         return Err(anyhow!("Not a role"));
     };
@@ -96,9 +107,13 @@ async fn set(
         return Err(anyhow!("Not an integer"));
     };
 
+    let CommandDataOptionValue::Boolean(permanent) = *permanent_option else {
+        return Err(anyhow!("Not a boolean"));
+    };
+
     let role_id = role.id.0 as i64;
 
-    let data = RoleData::new(role_id, chives);
+    let data = RoleData::new(role_id, chives, permanent);
 
     database::set_role(&data, pool).await?;
 

@@ -33,9 +33,14 @@ pub async fn command(
 
     for data in roles {
         message.push(format!(
-            "{} - {}",
+            "{} - {} - {}",
             RoleId(data.role as u64).mention(),
-            data.chives
+            data.chives,
+            if data.permanent {
+                "Permanent"
+            } else {
+                "Exclusive"
+            }
         ));
     }
 

@@ -139,28 +139,7 @@ async fn update_verifications(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> R
         let score_data = DbConnection { uid, user };
         database::set_connection(&score_data, pool).await?;
 
-        let roles = database::get_roles_order_by_chives_desc(pool).await?;
-        let mut d = HashSet::new();
-
-        if let Ok(mut member) = GUILD_ID.member(&cache, user as u64).await {
-            if let Some(role_add) = roles.iter().find(|r| score.achievement_count >= r.chives) {
-                add_member_role(&mut member, role_add.role, &mut d, &cache.http, pool).await?;
-
-                for role in &roles {
-                    if role.role == role_add.role {
-                        continue;
-                    }
-
-                    if role.chives < 0 {
-                        add_member_role(&mut member, role.role, &mut d, &cache.http, pool).await?;
-
-                        continue;
-                    }
-
-                    remove_member_role(&mut member, role.role, &mut d, &cache.http, pool).await?;
-                }
-            }
-        }
+        update_user_roles(user, &mut HashSet::new(), &cache.http, pool).await?;
 
         if let Ok(channel) = UserId(user as u64).create_dm_channel(&cache).await {
             let _ = channel
@@ -288,49 +267,31 @@ pub async fn update_user_roles(
         }
     }
 
-    let roles = database::get_roles_order_by_chives_desc(pool).await?;
+    let permanent_roles = database::get_permanent_roles_order_by_chives(pool).await?;
 
-    let Some(role_add) = roles.iter().find(|r| score.achievement_count >= r.chives) else {
+    for role in &permanent_roles {
+        if score.achievement_count >= role.chives {
+            add_member_role(&mut member, role.role, d, http, pool).await?;
+        }
+    }
+
+    let Some(role_add) = database::get_roles_order_by_chives_desc(pool)
+        .await?
+        .into_iter()
+        .find(|r| score.achievement_count >= r.chives)
+    else {
         return Ok(());
     };
 
     add_member_role(&mut member, role_add.role, d, http, pool).await?;
 
-    // FIX: TEMPORARY
-    let role_add_500 =
-        (score.achievement_count >= 500).then(|| roles.iter().find(|r| r.chives == 500).unwrap());
-    if let Some(role) = role_add_500 {
-        add_member_role(&mut member, role.role, d, http, pool).await?;
-    }
-
-    for role in &roles {
-        if role.role == role_add.role || Some(role.role) == role_add_500.map(|r| r.role) {
-            continue;
-        }
-
-        if role.chives < 0 {
-            add_member_role(&mut member, role.role, d, http, pool).await?;
-
+    for role in database::get_exclusive_roles(pool).await? {
+        if role.role == role_add.role {
             continue;
         }
 
         remove_member_role(&mut member, role.role, d, http, pool).await?;
     }
-    // FIX: TEMPORARY
-
-    // for role in &roles {
-    //     if role.role == role_add.role {
-    //         continue;
-    //     }
-    //
-    //     if role.chives < 0 {
-    //         add_member_role(&mut member, role.role, d, http, pool).await?;
-    //
-    //         continue;
-    //     }
-    //
-    //     remove_member_role(&mut member, role.role, d, http, pool).await?;
-    // }
 
     Ok(())
 }
