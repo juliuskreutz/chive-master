@@ -2,19 +2,18 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*.*.*"
-
-permissions: write-all
+    branches:
+      - master
+  workflow_dispatch:
 
 jobs:
   run:
-    name: Release
+    name: Deploy
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Get Rust Toolchain
         uses: actions-rs/toolchain@v1
@@ -37,8 +36,30 @@ jobs:
           command: build
           args: --release
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
+      - name: Prepare
+        run: mv target/x86_64-unknown-linux-gnu/release/chive-master .
+
+      - name: Delete Old File
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          name: Release
-          files: target/x86_64-unknown-linux-gnu/release/chive-master
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          script: rm chive-master/chive-master
+
+      - name: Copy New File
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          source: chive-master
+          target: /root/chive-master/
+
+      - name: Restart Service
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          script: systemctl restart chive-master

@@ -10,7 +10,7 @@ A discord bot, that lets users register with their Honkai Star Rail uid to parti
 
 ## Hosting
 
-Just grab the latest release executable [here](https://github.com/juliuskreutz/chive-master/releases/latest). (Currently only x86_64-linux is supported). Put a `.env` file in the same folder that looks like this (replacing the token with your bot token). You might need to install sqlite3
+Build the executable. Put a `.env` file in the same folder that looks like this (replacing the token with your bot token). You might need to install sqlite3
 
 ```
 DISCORD_TOKEN=token
