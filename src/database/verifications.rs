@@ -68,12 +68,11 @@ pub async fn get_verifications_where_like(
 
 pub async fn set_verification(data: &VerificationData, pool: &SqlitePool) -> Result<()> {
     sqlx::query!(
-        "INSERT OR REPLACE INTO verifications(uid, user, name, otp, timestamp) VALUES(?, ?, ?, ?, ?)",
+        "INSERT OR REPLACE INTO verifications(uid, user, name, otp) VALUES(?, ?, ?, ?)",
         data.uid,
         data.user,
         data.name,
-        data.otp,
-        data.timestamp,
+        data.otp
     )
     .execute(pool)
     .await?;
