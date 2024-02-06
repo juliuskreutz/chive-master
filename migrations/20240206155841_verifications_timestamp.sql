@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS verifications (
     user INTEGER NOT NULL,
     name TEXT NOT NULL,
     otp TEXT NOT NULL,
-    timestamp TIMESTAMP
+    timestamp TIMESTAMP NOT NULL
 );
 
 INSERT INTO verifications(uid, user, name, otp, timestamp) SELECT uid, user, name, otp, CURRENT_TIMESTAMP timestamp FROM verifications_old;
