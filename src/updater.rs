@@ -14,7 +14,6 @@ use serenity::{
         },
         Permissions,
     },
-    CacheAndHttp,
 };
 use sqlx::SqlitePool;
 use tokio::time;
@@ -24,9 +23,9 @@ use crate::{
     stardb,
 };
 
-const GUILD_ID: GuildId = GuildId(1008493665116758167);
+const GUILD_ID: GuildId = GuildId::new(1008493665116758167);
 
-pub fn init(cache: Arc<CacheAndHttp>, pool: SqlitePool) {
+pub fn init(cache: Arc<Http>, pool: SqlitePool) {
     {
         let cache = cache.clone();
         let pool = pool.clone();
@@ -119,7 +118,7 @@ pub fn init(cache: Arc<CacheAndHttp>, pool: SqlitePool) {
     });
 }
 
-async fn update_verifications(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()> {
+async fn update_verifications(cache: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
     let verifications = database::get_verifications(pool).await?;
     for verification_data in verifications {
         if verification_data.timestamp + chrono::Duration::days(1) < chrono::Utc::now().naive_utc()
@@ -147,7 +146,7 @@ async fn update_verifications(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> R
 
         update_user_roles(user, &mut HashSet::new(), &cache.http, pool).await?;
 
-        if let Ok(channel) = UserId(user as u64).create_dm_channel(&cache).await {
+        if let Ok(channel) = UserId::new(user as u64).create_dm_channel(&cache).await {
             let _ = channel
                 .send_message(&cache.http, |m| {
                     m.content("Congratulations Completionist! You are now @Chive Verified and your profile will appear on the Chive Leaderboards: https://stardb.gg/leaderboard. You can change your HSR bio back to what it was originally. Additionally, you've gained access to the https://discord.com/channels/1008493665116758167/1108110331043123200 channel.")
@@ -159,7 +158,7 @@ async fn update_verifications(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> R
     Ok(())
 }
 
-async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()> {
+async fn update_leaderboard(cache: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
     let mut scores = Vec::new();
 
     for uid in database::get_uids(pool).await? {
@@ -191,7 +190,7 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
 
     let channels = database::get_channels(pool).await?;
     for channel in channels {
-        if let Ok(messages) = ChannelId(channel.channel as u64)
+        if let Ok(messages) = ChannelId::new(channel.channel as u64)
             .messages(&cache.http, |b| b.limit(2))
             .await
         {
@@ -204,7 +203,7 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
             }
         }
 
-        if let Err(serenity::Error::Http(_)) = ChannelId(channel.channel as u64)
+        if let Err(serenity::Error::Http(_)) = ChannelId::new(channel.channel as u64)
             .send_message(&cache.http, |m| {
                 m.embed(|e| {
                     e.color(0xFFD700)
@@ -227,7 +226,7 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
             continue;
         }
 
-        ChannelId(channel.channel as u64)
+        ChannelId::new(channel.channel as u64)
             .send_message(&cache.http, |m| {
                 m.embed(|e| {
                     e.color(0xFFD700)
@@ -241,7 +240,7 @@ async fn update_leaderboard(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Res
     Ok(())
 }
 
-async fn update_roles(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()> {
+async fn update_roles(cache: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
     let mut d = HashSet::new();
 
     let users = database::get_users(pool).await?;
@@ -309,7 +308,7 @@ async fn add_member_role(
     http: &Arc<Http>,
     pool: &SqlitePool,
 ) -> Result<()> {
-    if let Err(serenity::Error::Http(_)) = member.add_role(&http, RoleId(role as u64)).await {
+    if let Err(serenity::Error::Http(_)) = member.add_role(&http, RoleId::new(role as u64)).await {
         if d.insert(role) {
             log(&format!( "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>", role), http) .await;
 
@@ -327,7 +326,8 @@ async fn remove_member_role(
     http: &Arc<Http>,
     pool: &SqlitePool,
 ) -> Result<()> {
-    if let Err(serenity::Error::Http(_)) = member.remove_role(&http, RoleId(role as u64)).await {
+    if let Err(serenity::Error::Http(_)) = member.remove_role(&http, RoleId::new(role as u64)).await
+    {
         if d.insert(role) {
             log( &format!( "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>", role), http) .await;
 
@@ -338,7 +338,7 @@ async fn remove_member_role(
     Ok(())
 }
 
-async fn update_matches(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()> {
+async fn update_matches(cache: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
     let candidates = database::get_candidates(pool).await?;
 
     let mut c = HashSet::new();
@@ -389,22 +389,22 @@ async fn update_matches(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<
             PermissionOverwrite {
                 allow: Permissions::empty(),
                 deny: Permissions::VIEW_CHANNEL,
-                kind: PermissionOverwriteType::Role(RoleId(1008493665116758167)),
+                kind: PermissionOverwriteType::Role(RoleId::new(1008493665116758167)),
             },
             PermissionOverwrite {
                 allow: Permissions::VIEW_CHANNEL,
                 deny: Permissions::empty(),
-                kind: PermissionOverwriteType::Member(UserId(user1 as u64)),
+                kind: PermissionOverwriteType::Member(UserId::new(user1 as u64)),
             },
             PermissionOverwrite {
                 allow: Permissions::VIEW_CHANNEL,
                 deny: Permissions::empty(),
-                kind: PermissionOverwriteType::Member(UserId(user2 as u64)),
+                kind: PermissionOverwriteType::Member(UserId::new(user2 as u64)),
             },
         ];
 
-        let name1 = UserId(user1 as u64).to_user(&cache.http).await?.name;
-        let name2 = UserId(user2 as u64).to_user(&cache.http).await?.name;
+        let name1 = UserId::new(user1 as u64).to_user(&cache.http).await?.name;
+        let name2 = UserId::new(user2 as u64).to_user(&cache.http).await?.name;
 
         let channels = GUILD_ID.channels(&cache.http).await?;
 
@@ -412,7 +412,7 @@ async fn update_matches(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<
 
         for channel in channels.values() {
             if channel.kind == ChannelType::Category && channel.name == "💕 [matches] 💕" {
-                matches_categories.push(channel.id.0);
+                matches_categories.push(channel.id.get());
             }
         }
 
@@ -453,7 +453,7 @@ async fn update_matches(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<
         let channel = channel.unwrap();
 
         let db_match = DbMatch {
-            channel: channel.id.0 as i64,
+            channel: channel.id.get() as i64,
             user1,
             user2,
         };
@@ -482,7 +482,7 @@ Amazing! Your support contractor has been found. Please use this channel to
 }
 
 pub async fn log(content: &str, http: &Arc<Http>) {
-    ChannelId(1119634729377992774)
+    ChannelId::new(1119634729377992774)
         .send_message(&http, |m| m.content(content))
         .await
         .unwrap();

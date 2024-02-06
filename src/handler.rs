@@ -1,19 +1,8 @@
 use anyhow::Result;
 use serenity::{
+    all::{Command, CommandInteraction, ComponentInteraction, Interaction, ModalInteraction},
     async_trait,
-    model::{
-        application::interaction::Interaction,
-        gateway::Ready,
-        prelude::{
-            command::Command,
-            interaction::{
-                application_command::ApplicationCommandInteraction,
-                autocomplete::AutocompleteInteraction,
-                message_component::MessageComponentInteraction, modal::ModalSubmitInteraction,
-            },
-            Activity,
-        },
-    },
+    model::{gateway::Ready, prelude::Activity},
     prelude::*,
 };
 use sqlx::SqlitePool;
@@ -25,11 +14,7 @@ pub struct Handler {
 }
 
 impl Handler {
-    async fn application_command(
-        &self,
-        ctx: &Context,
-        command: &ApplicationCommandInteraction,
-    ) -> Result<()> {
+    async fn application_command(&self, ctx: &Context, command: &CommandInteraction) -> Result<()> {
         match command.data.name.as_str() {
             commands::register::NAME => commands::register::command(ctx, command, &self.pool).await,
             commands::unregister::NAME => {
@@ -64,7 +49,7 @@ impl Handler {
     async fn message_component(
         &self,
         ctx: &Context,
-        interaction: &MessageComponentInteraction,
+        interaction: &ComponentInteraction,
     ) -> Result<()> {
         match interaction.data.custom_id.as_str() {
             commands::register::NAME => {
@@ -78,11 +63,7 @@ impl Handler {
         }
     }
 
-    async fn modal_submit(
-        &self,
-        ctx: &Context,
-        interaction: &ModalSubmitInteraction,
-    ) -> Result<()> {
+    async fn modal_submit(&self, ctx: &Context, interaction: &ModalInteraction) -> Result<()> {
         match interaction.data.custom_id.as_str() {
             commands::register::NAME => {
                 commands::register::modal(ctx, interaction, &self.pool).await
@@ -91,11 +72,7 @@ impl Handler {
         }
     }
 
-    async fn autocomplete(
-        &self,
-        ctx: &Context,
-        autocomplete: &AutocompleteInteraction,
-    ) -> Result<()> {
+    async fn autocomplete(&self, ctx: &Context, autocomplete: &CommandInteraction) -> Result<()> {
         match autocomplete.data.name.as_str() {
             commands::verify::NAME => {
                 commands::verify::autocomplete(ctx, autocomplete, &self.pool).await

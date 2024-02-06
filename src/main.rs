@@ -36,7 +36,7 @@ async fn main() -> Result<()> {
         }
     };
 
-    updater::init(client.cache_and_http.clone(), pool);
+    updater::init(client.http.clone(), pool);
 
     client.start().await?;
 
