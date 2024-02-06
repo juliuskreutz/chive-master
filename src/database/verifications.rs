@@ -1,4 +1,5 @@
 use anyhow::Result;
+use chrono::NaiveDateTime;
 use sqlx::SqlitePool;
 
 pub struct VerificationData {
@@ -6,15 +7,17 @@ pub struct VerificationData {
     pub user: i64,
     pub name: String,
     pub otp: String,
+    pub timestamp: NaiveDateTime,
 }
 
 impl VerificationData {
-    pub fn new(uid: i64, user: i64, name: String, otp: String) -> Self {
+    pub fn new(uid: i64, user: i64, name: String, otp: String, timestamp: NaiveDateTime) -> Self {
         Self {
             uid,
             user,
             name,
             otp,
+            timestamp,
         }
     }
 }

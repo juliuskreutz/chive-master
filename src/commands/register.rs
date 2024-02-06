@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use chrono::Utc;
 use rand::{distributions::Alphanumeric, Rng};
 use serenity::{
     builder::{CreateApplicationCommand, CreateInteractionResponseFollowup},
@@ -82,7 +83,7 @@ pub async fn command(
     let otp = otp();
     let name = user.name.clone();
 
-    let data = VerificationData::new(uid, user_id, name, otp);
+    let data = VerificationData::new(uid, user_id, name, otp, Utc::now().naive_utc());
 
     database::set_verification(&data, pool).await?;
 
@@ -141,7 +142,7 @@ pub async fn modal(
     let otp = otp();
     let name = user.name.clone();
 
-    let data = VerificationData::new(uid, user_id, name, otp);
+    let data = VerificationData::new(uid, user_id, name, otp, Utc::now().naive_utc());
 
     database::set_verification(&data, pool).await?;
 

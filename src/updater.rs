@@ -122,7 +122,13 @@ pub fn init(cache: Arc<CacheAndHttp>, pool: SqlitePool) {
 async fn update_verifications(cache: &Arc<CacheAndHttp>, pool: &SqlitePool) -> Result<()> {
     let verifications = database::get_verifications(pool).await?;
     for verification_data in verifications {
-        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        if verification_data.timestamp + chrono::Duration::days(1) < chrono::Utc::now().naive_utc()
+        {
+            database::delete_verification_by_uid(verification_data.uid, pool).await?;
+            continue;
+        }
+
+        tokio::time::sleep(Duration::from_secs(5)).await;
 
         let uid = verification_data.uid;
 
