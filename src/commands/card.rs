@@ -166,6 +166,10 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
                 .add_int_choice("1", 1)
                 .add_int_choice("2", 2)
                 .add_int_choice("3", 3)
+                .add_int_choice("4", 4)
+                .add_int_choice("5", 5)
+                .add_int_choice("6", 6)
+                .add_int_choice("7", 7)
                 .required(true)
         })
         .create_option(|o| {
