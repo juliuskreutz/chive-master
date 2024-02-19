@@ -1,4 +1,5 @@
 pub mod apply;
+pub mod blacklist;
 pub mod card;
 pub mod channel;
 pub mod disband;

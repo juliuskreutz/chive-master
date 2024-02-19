@@ -1,7 +1,8 @@
 use anyhow::Result;
 use serenity::{
     all::{
-        Command, CommandInteraction, ComponentInteraction, Interaction, ModalInteraction, Ready,
+        Command, CommandInteraction, ComponentInteraction, Interaction, ModalInteraction, Reaction,
+        Ready,
     },
     builder::CreateInteractionResponseFollowup,
     client::{Context, EventHandler},
@@ -37,6 +38,9 @@ impl Handler {
             commands::disband::NAME => commands::disband::command(ctx, command, &self.pool).await,
             commands::uids::NAME => commands::uids::command(ctx, command, &self.pool).await,
             commands::update::NAME => commands::update::command(ctx, command, &self.pool).await,
+            commands::blacklist::NAME => {
+                commands::blacklist::command(ctx, command, &self.pool).await
+            }
             _ => Ok(()),
         }
     }
@@ -75,6 +79,10 @@ impl Handler {
             _ => Ok(()),
         }
     }
+
+    async fn reaction(&self, ctx: &Context, reaction: &Reaction) {
+        commands::blacklist::reaction(ctx, reaction, &self.pool).await;
+    }
 }
 
 #[serenity::async_trait]
@@ -98,6 +106,7 @@ impl EventHandler for Handler {
                 commands::disband::register(),
                 commands::uids::register(),
                 commands::update::register(),
+                commands::blacklist::register(),
             ],
         )
         .await
@@ -152,5 +161,9 @@ impl EventHandler for Handler {
             }
             _ => unimplemented!(),
         };
+    }
+
+    async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
+        self.reaction(&ctx, &reaction).await;
     }
 }

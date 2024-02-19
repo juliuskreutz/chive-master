@@ -1,3 +1,4 @@
+mod blacklist;
 mod candidates;
 mod channels;
 mod connections;
@@ -5,6 +6,7 @@ mod matches;
 mod roles;
 mod verifications;
 
+pub use blacklist::*;
 pub use candidates::*;
 pub use channels::*;
 pub use connections::*;

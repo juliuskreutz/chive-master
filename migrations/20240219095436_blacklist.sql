@@ -1,0 +1,3 @@
+CREATE TABLE IF NOT EXISTS blacklist (
+    emoji TEXT PRIMARY KEY NOT NULL
+);
