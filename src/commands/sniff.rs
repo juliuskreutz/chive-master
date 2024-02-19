@@ -48,11 +48,9 @@ pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqliteP
 
 pub fn register() -> CreateCommand {
     CreateCommand::new(NAME)
-        .add_option(CreateCommandOption::new(
-            CommandOptionType::User,
-            "user",
-            "User",
-        ))
+        .add_option(
+            CreateCommandOption::new(CommandOptionType::User, "user", "User").required(true),
+        )
         .description("Get connected uids of a user")
         .default_member_permissions(Permissions::ADMINISTRATOR)
 }
