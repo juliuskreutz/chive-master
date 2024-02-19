@@ -1,15 +1,11 @@
 use anyhow::{anyhow, Result};
 use serenity::{
-    builder::CreateApplicationCommand,
-    model::prelude::{
-        command::CommandOptionType,
-        interaction::{
-            application_command::{ApplicationCommandInteraction, CommandDataOptionValue},
-            InteractionResponseType,
-        },
-        RoleId,
+    all::{CommandInteraction, CommandOptionType, RoleId},
+    builder::{
+        CreateCommand, CreateCommandOption, CreateInteractionResponse,
+        CreateInteractionResponseFollowup, CreateInteractionResponseMessage,
     },
-    prelude::Context,
+    client::Context,
 };
 use sqlx::SqlitePool;
 
@@ -17,28 +13,19 @@ use crate::database;
 
 pub const NAME: &str = "unregister";
 
-pub async fn command(
-    ctx: &Context,
-    command: &ApplicationCommandInteraction,
-    pool: &SqlitePool,
-) -> Result<()> {
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
     command
-        .create_interaction_response(ctx, |r| {
-            r.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-                .interaction_response_data(|d| d.ephemeral(true))
-        })
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
         .await?;
 
-    let option = command.data.options[0]
-        .resolved
-        .as_ref()
-        .ok_or_else(|| anyhow!("No option"))?;
+    let uid = command.data.options[0].value.as_i64().unwrap();
 
-    let CommandDataOptionValue::Integer(uid) = *option else {
-        return Err(anyhow!("Not an integer"));
-    };
-
-    let user = command.user.id.0 as i64;
+    let user = command.user.id.get() as i64;
     let scores = database::get_connections_by_user(user, pool).await?;
 
     if !scores.iter().any(|s| s.uid == uid) {
@@ -47,31 +34,30 @@ pub async fn command(
 
     database::delete_connection_by_uid(uid, pool).await?;
 
-    if let Some(mut member) = command.member.clone() {
+    if let Some(member) = command.member.clone() {
         let roles = database::get_roles(pool).await?;
 
         for role in roles {
-            let _ = member.remove_role(&ctx, RoleId(role.role as u64)).await;
+            let _ = member
+                .remove_role(&ctx, RoleId::new(role.role as u64))
+                .await;
         }
     }
 
     command
-        .create_followup_message(ctx, |m| {
-            m.content(format!("Successfully unregistered {uid}"))
-        })
+        .create_followup(
+            &ctx,
+            CreateInteractionResponseFollowup::new().content("Successfully unregistered uid"),
+        )
         .await?;
 
     Ok(())
 }
 
-pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-    command
-        .name(NAME)
+pub fn register() -> CreateCommand {
+    CreateCommand::new(NAME)
         .description("Unregister your uid")
-        .create_option(|o| {
-            o.name("uid")
-                .description("Your uid")
-                .kind(CommandOptionType::Integer)
-                .required(true)
-        })
+        .add_option(
+            CreateCommandOption::new(CommandOptionType::Integer, "uid", "Your uid").required(true),
+        )
 }

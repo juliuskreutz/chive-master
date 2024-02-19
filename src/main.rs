@@ -8,10 +8,12 @@ use std::{env, str::FromStr};
 
 use anyhow::Result;
 use dotenv::dotenv;
-use serenity::{prelude::GatewayIntents, Client};
+use serenity::{all::GuildId, prelude::GatewayIntents, Client};
 use sqlx::{sqlite::SqliteConnectOptions, SqlitePool};
 
 use crate::handler::Handler;
+
+const GUILD_ID: GuildId = GuildId::new(1008493665116758167);
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -36,7 +38,7 @@ async fn main() -> Result<()> {
         }
     };
 
-    updater::init(client.cache_and_http.clone(), pool);
+    updater::init(client.http.clone(), pool);
 
     client.start().await?;
 

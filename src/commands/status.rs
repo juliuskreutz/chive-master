@@ -1,10 +1,11 @@
 use anyhow::{anyhow, Result};
 use serenity::{
-    builder::CreateApplicationCommand,
-    model::prelude::interaction::{
-        application_command::ApplicationCommandInteraction, InteractionResponseType,
+    all::CommandInteraction,
+    builder::{
+        CreateCommand, CreateEmbed, CreateInteractionResponse, CreateInteractionResponseFollowup,
+        CreateInteractionResponseMessage,
     },
-    prelude::Context,
+    client::Context,
 };
 use sqlx::SqlitePool;
 
@@ -12,19 +13,17 @@ use crate::database;
 
 pub const NAME: &str = "status";
 
-pub async fn command(
-    ctx: &Context,
-    command: &ApplicationCommandInteraction,
-    pool: &SqlitePool,
-) -> Result<()> {
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
     command
-        .create_interaction_response(ctx, |r| {
-            r.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-                .interaction_response_data(|d| d.ephemeral(true))
-        })
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
         .await?;
 
-    let user_id = command.user.id.0 as i64;
+    let user_id = command.user.id.get() as i64;
 
     let verifications = database::get_verifications_by_user(user_id, pool).await?;
 
@@ -32,27 +31,33 @@ pub async fn command(
         return Err(anyhow!("You have no pending verifications"));
     }
 
-    command
-        .create_followup_message(ctx, |m| {
-            m.embed(|e| {
-                let mut e = e.title("Pending Verifications").description("Listed below are your uids and their respective code, which you'll have to append in your comment section of the game.");
-
-                for verification in verifications {
-                    e = e.field(
-                        verification.uid,
+    let embed = CreateEmbed::new()
+        .title("Pending Verifications")
+        .description("Listed below are your uids and their respective code, which you'll have to append in your comment section of the game.")
+        .fields(
+            verifications
+                .iter()
+                .map(|verification| {
+                    (
+                        verification.uid.to_string(),
                         format!("Code: **{}**", verification.otp),
                         false,
-                    );
-                }
+                    )
+                })
+        );
 
-                e
-            }).ephemeral(true)
-        })
+    command
+        .create_followup(
+            &ctx,
+            CreateInteractionResponseFollowup::new()
+                .embed(embed)
+                .ephemeral(true),
+        )
         .await?;
 
     Ok(())
 }
 
-pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-    command.name(NAME).description("Verification status")
+pub fn register() -> CreateCommand {
+    CreateCommand::new(NAME).description("Verification status")
 }

@@ -1,10 +1,11 @@
 use anyhow::{anyhow, Result};
 use serenity::{
-    builder::CreateApplicationCommand,
-    model::prelude::interaction::{
-        application_command::ApplicationCommandInteraction, InteractionResponseType,
+    all::CommandInteraction,
+    builder::{
+        CreateCommand, CreateInteractionResponse, CreateInteractionResponseFollowup,
+        CreateInteractionResponseMessage,
     },
-    prelude::Context,
+    client::Context,
 };
 use sqlx::SqlitePool;
 
@@ -12,19 +13,17 @@ use crate::database;
 
 pub const NAME: &str = "uids";
 
-pub async fn command(
-    ctx: &Context,
-    command: &ApplicationCommandInteraction,
-    pool: &SqlitePool,
-) -> Result<()> {
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
     command
-        .create_interaction_response(ctx, |r| {
-            r.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-                .interaction_response_data(|d| d.ephemeral(true))
-        })
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
         .await?;
 
-    let user_id = command.user.id.0 as i64;
+    let user_id = command.user.id.get() as i64;
 
     let connections = database::get_connections_by_user(user_id, pool).await?;
 
@@ -34,13 +33,18 @@ pub async fn command(
 
     for connection in connections {
         command
-            .create_followup_message(ctx, |m| m.content(connection.uid).ephemeral(true))
+            .create_followup(
+                &ctx,
+                CreateInteractionResponseFollowup::new()
+                    .content(connection.uid.to_string())
+                    .ephemeral(true),
+            )
             .await?;
     }
 
     Ok(())
 }
 
-pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-    command.name(NAME).description("Get connected uids")
+pub fn register() -> CreateCommand {
+    CreateCommand::new(NAME).description("Get connected uids")
 }

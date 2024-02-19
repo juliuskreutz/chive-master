@@ -2,19 +2,16 @@ use anyhow::{anyhow, Result};
 use chrono::Utc;
 use rand::{distributions::Alphanumeric, Rng};
 use serenity::{
-    builder::{CreateApplicationCommand, CreateInteractionResponseFollowup},
-    model::prelude::{
-        command::CommandOptionType,
-        component::{ActionRowComponent, InputTextStyle},
-        interaction::{
-            application_command::{ApplicationCommandInteraction, CommandDataOptionValue},
-            message_component::MessageComponentInteraction,
-            modal::ModalSubmitInteraction,
-            InteractionResponseType,
-        },
-        UserId,
+    all::{
+        ActionRowComponent, CommandInteraction, CommandOptionType, ComponentInteraction,
+        InputTextStyle, Mentionable, ModalInteraction, UserId,
     },
-    prelude::{Context, Mentionable},
+    builder::{
+        CreateActionRow, CreateCommand, CreateCommandOption, CreateEmbed, CreateEmbedFooter,
+        CreateInputText, CreateInteractionResponse, CreateInteractionResponseFollowup,
+        CreateInteractionResponseMessage, CreateModal,
+    },
+    client::Context,
 };
 use sqlx::SqlitePool;
 
@@ -26,26 +23,17 @@ use crate::{
 pub const NAME: &str = "register";
 const UID_ID: &str = "uid";
 
-pub async fn command(
-    ctx: &Context,
-    command: &ApplicationCommandInteraction,
-    pool: &SqlitePool,
-) -> Result<()> {
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
     command
-        .create_interaction_response(ctx, |r| {
-            r.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-                .interaction_response_data(|d| d.ephemeral(true))
-        })
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
         .await?;
 
-    let option = command.data.options[0]
-        .resolved
-        .as_ref()
-        .ok_or_else(|| anyhow!("No option"))?;
-
-    let CommandDataOptionValue::Integer(uid) = *option else {
-        return Err(anyhow!("Not an integer"));
-    };
+    let uid = command.data.options[0].value.as_i64().unwrap();
 
     if uid == 420 {
         return Err(anyhow!("Try 69 next.."));
@@ -64,7 +52,7 @@ pub async fn command(
     if let Ok(score_data) = database::get_connection_by_uid(uid, pool).await {
         return Err(anyhow!(
             "Already registered to {}",
-            UserId(score_data.user as u64).mention()
+            UserId::new(score_data.user as u64).mention()
         ));
     }
 
@@ -79,31 +67,27 @@ pub async fn command(
     }
 
     let user = &command.user;
-    let user_id = user.id.0 as i64;
+    let user_id = user.id.get() as i64;
     let otp = otp();
     let name = user.name.clone();
 
-    let data = VerificationData::new(uid, user_id, name, otp, Utc::now().naive_utc());
+    let data = VerificationData::new(uid, user_id, name, otp.clone(), Utc::now().naive_utc());
 
     database::set_verification(&data, pool).await?;
 
-    command
-        .create_followup_message(ctx, |m| response(m, &data.otp))
-        .await?;
+    command.create_followup(&ctx, response(&otp)).await?;
 
     Ok(())
 }
 
-pub async fn modal(
-    ctx: &Context,
-    interaction: &ModalSubmitInteraction,
-    pool: &SqlitePool,
-) -> Result<()> {
+pub async fn modal(ctx: &Context, interaction: &ModalInteraction, pool: &SqlitePool) -> Result<()> {
     interaction
-        .create_interaction_response(ctx, |r| {
-            r.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-                .interaction_response_data(|d| d.ephemeral(true))
-        })
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
         .await?;
 
     let uid: i64 = interaction
@@ -116,14 +100,14 @@ pub async fn modal(
             _ => None,
         })
         .find(|i| i.custom_id == UID_ID)
+        .and_then(|i| i.value.as_ref())
         .ok_or_else(|| anyhow!("No uid"))?
-        .value
         .parse()?;
 
     if let Ok(score_data) = database::get_connection_by_uid(uid, pool).await {
         return Err(anyhow!(
             "Already registered to {}",
-            UserId(score_data.user as u64).mention()
+            UserId::new(score_data.user as u64).mention()
         ));
     }
 
@@ -138,73 +122,61 @@ pub async fn modal(
     }
 
     let user = &interaction.user;
-    let user_id = user.id.0 as i64;
+    let user_id = user.id.get() as i64;
     let otp = otp();
     let name = user.name.clone();
 
-    let data = VerificationData::new(uid, user_id, name, otp, Utc::now().naive_utc());
+    let data = VerificationData::new(uid, user_id, name, otp.clone(), Utc::now().naive_utc());
 
     database::set_verification(&data, pool).await?;
 
-    interaction
-        .create_followup_message(ctx, |m| response(m, &data.otp))
-        .await?;
+    interaction.create_followup(&ctx, response(&otp)).await?;
 
     Ok(())
 }
 
 pub async fn component(
     ctx: &Context,
-    interaction: &MessageComponentInteraction,
+    interaction: &ComponentInteraction,
     _: &SqlitePool,
 ) -> Result<()> {
     interaction
-        .create_interaction_response(ctx, |r| {
-            r.kind(InteractionResponseType::Modal)
-                .interaction_response_data(|d| {
-                    d.custom_id(NAME)
-                        .title("Please put in your uid")
-                        .components(|c| {
-                            c.create_action_row(|r| {
-                                r.create_input_text(|i| {
-                                    i.custom_id(UID_ID)
-                                        .label("uid")
-                                        .placeholder("123456789")
-                                        .style(InputTextStyle::Short)
-                                })
-                            })
-                        })
-                })
-        })
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Modal(
+                CreateModal::new(NAME, "Please put in your uid").components(vec![
+                    CreateActionRow::InputText(
+                        CreateInputText::new(InputTextStyle::Short, "uid", UID_ID)
+                            .placeholder("123456789"),
+                    ),
+                ]),
+            ),
+        )
         .await?;
 
     Ok(())
 }
 
-pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-    command
-        .name(NAME)
+pub fn register() -> CreateCommand {
+    CreateCommand::new(NAME)
         .description("Register your account")
-        .create_option(|o| {
-            o.name("uid")
-                .description("Your uid")
-                .kind(CommandOptionType::Integer)
-                .required(true)
-        })
+        .add_option(
+            CreateCommandOption::new(CommandOptionType::Integer, "uid", "Your uid").required(true),
+        )
 }
 
-fn response<'a, 'b>(
-    response: &'b mut CreateInteractionResponseFollowup<'a>,
-    otp: &str,
-) -> &'b mut CreateInteractionResponseFollowup<'a> {
+fn response(otp: &str) -> CreateInteractionResponseFollowup {
     let text = format!("Please verify that your UID belongs to you by appending the following 6 characters to your bio of your player account in game. The bio must have the 6 characters last.\n\n**{otp}**\n\nThen wait 5 - 15 mins. The bot will verify your ownership and add your account's achievements to the rankings. Once you are added, you're free to change your comment section.\n\nIf you encounter an issue, please message us in the <#1010268018028327062> channel.");
 
-    response
-        .embed(|e| {
-            e.title("Verification")
+    CreateInteractionResponseFollowup::new()
+        .embed(
+            CreateEmbed::new()
+                .title("Verification")
                 .description(text)
-                .footer(|f| f.text("Check verification status with /status"))
-        })
+                .footer(CreateEmbedFooter::new(
+                    "Check verification status with /status",
+                )),
+        )
         .ephemeral(true)
 }
 

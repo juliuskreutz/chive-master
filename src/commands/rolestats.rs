@@ -1,41 +1,29 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use serde_json::json;
 use serenity::{
-    builder::CreateApplicationCommand,
-    model::prelude::{
-        interaction::{
-            application_command::ApplicationCommandInteraction, InteractionResponseType,
-        },
-        RoleId,
+    all::{CommandInteraction, RoleId},
+    builder::{
+        CreateCommand, CreateInteractionResponse, CreateInteractionResponseFollowup,
+        CreateInteractionResponseMessage,
     },
-    prelude::Context,
+    client::Context,
 };
 use sqlx::SqlitePool;
 use url::Url;
 
-use crate::database;
+use crate::{database, GUILD_ID};
 
 pub const NAME: &str = "rolestats";
 
-pub async fn command(
-    ctx: &Context,
-    command: &ApplicationCommandInteraction,
-    pool: &SqlitePool,
-) -> Result<()> {
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
     command
-        .create_interaction_response(ctx, |r| {
-            r.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-                .interaction_response_data(
-                    |d: &mut serenity::builder::CreateInteractionResponseData<'_>| {
-                        d.ephemeral(true)
-                    },
-                )
-        })
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
         .await?;
-
-    let Some(guild) = command.guild_id else {
-        return Err(anyhow!("This command needs to be used in a guild"));
-    };
 
     let role_ids = database::get_roles(pool)
         .await?
@@ -44,10 +32,10 @@ pub async fn command(
         .map(|rd| rd.role as u64)
         .collect::<Vec<_>>();
 
-    let mut members = guild.members(&ctx, None, None).await?;
-    members.retain(|m| m.roles.iter().any(|r| role_ids.contains(&r.0)));
+    let mut members = GUILD_ID.members(&ctx, None, None).await?;
+    members.retain(|m| m.roles.iter().any(|r| role_ids.contains(&r.get())));
 
-    let roles = guild.roles(&ctx).await?;
+    let roles = GUILD_ID.roles(&ctx).await?;
 
     let mut data = Vec::new();
     let mut background_color = Vec::new();
@@ -56,7 +44,7 @@ pub async fn command(
     for role_id in role_ids {
         let count = members
             .iter()
-            .filter(|m| m.roles.iter().any(|r| r.0 == role_id))
+            .filter(|m| m.roles.iter().any(|r| r.get() == role_id))
             .count();
 
         if count == 0 {
@@ -65,7 +53,7 @@ pub async fn command(
 
         data.push(count);
 
-        let role = &roles[&RoleId(role_id)];
+        let role = &roles[&RoleId::new(role_id)];
         let color = format!(
             "rgb({}, {}, {})",
             role.colour.r(),
@@ -79,8 +67,9 @@ pub async fn command(
     }
 
     command
-        .create_followup_message(ctx, |m| {
-            m.content(
+        .create_followup(
+            &ctx,
+            CreateInteractionResponseFollowup::new().content(
                 Url::parse(&format!(
                     "https://quickchart.io/chart?bkg=%23ffffff&c={}",
                     json!({
@@ -109,15 +98,13 @@ pub async fn command(
                     })
                 ))
                 .unwrap(),
-            )
-        })
+            ),
+        )
         .await?;
 
     Ok(())
 }
 
-pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-    command
-        .name(NAME)
-        .description("Shows the role distribution of this server")
+pub fn register() -> CreateCommand {
+    CreateCommand::new(NAME).description("Shows the role distribution of this server")
 }

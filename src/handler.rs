@@ -1,20 +1,11 @@
 use anyhow::Result;
 use serenity::{
-    async_trait,
-    model::{
-        application::interaction::Interaction,
-        gateway::Ready,
-        prelude::{
-            command::Command,
-            interaction::{
-                application_command::ApplicationCommandInteraction,
-                autocomplete::AutocompleteInteraction,
-                message_component::MessageComponentInteraction, modal::ModalSubmitInteraction,
-            },
-            Activity,
-        },
+    all::{
+        Command, CommandInteraction, ComponentInteraction, Interaction, ModalInteraction, Ready,
     },
-    prelude::*,
+    builder::CreateInteractionResponseFollowup,
+    client::{Context, EventHandler},
+    gateway::ActivityData,
 };
 use sqlx::SqlitePool;
 
@@ -25,18 +16,13 @@ pub struct Handler {
 }
 
 impl Handler {
-    async fn application_command(
-        &self,
-        ctx: &Context,
-        command: &ApplicationCommandInteraction,
-    ) -> Result<()> {
+    async fn application_command(&self, ctx: &Context, command: &CommandInteraction) -> Result<()> {
         match command.data.name.as_str() {
             commands::register::NAME => commands::register::command(ctx, command, &self.pool).await,
             commands::unregister::NAME => {
                 commands::unregister::command(ctx, command, &self.pool).await
             }
             commands::verify::NAME => commands::verify::command(ctx, command, &self.pool).await,
-            commands::cancel::NAME => commands::cancel::command(ctx, command, &self.pool).await,
             commands::status::NAME => commands::status::command(ctx, command, &self.pool).await,
             commands::card::NAME => commands::card::command(ctx, command, &self.pool).await,
             commands::message::NAME => commands::message::command(ctx, command, &self.pool).await,
@@ -51,12 +37,6 @@ impl Handler {
             commands::disband::NAME => commands::disband::command(ctx, command, &self.pool).await,
             commands::uids::NAME => commands::uids::command(ctx, command, &self.pool).await,
             commands::update::NAME => commands::update::command(ctx, command, &self.pool).await,
-            // commands::submitship::NAME => {
-            //     commands::submitship::command(ctx, command, &self.pool).await
-            // }
-            // commands::shipstats::NAME => {
-            //     commands::shipstats::command(ctx, command, &self.pool).await
-            // }
             _ => Ok(()),
         }
     }
@@ -64,7 +44,7 @@ impl Handler {
     async fn message_component(
         &self,
         ctx: &Context,
-        interaction: &MessageComponentInteraction,
+        interaction: &ComponentInteraction,
     ) -> Result<()> {
         match interaction.data.custom_id.as_str() {
             commands::register::NAME => {
@@ -78,11 +58,7 @@ impl Handler {
         }
     }
 
-    async fn modal_submit(
-        &self,
-        ctx: &Context,
-        interaction: &ModalSubmitInteraction,
-    ) -> Result<()> {
+    async fn modal_submit(&self, ctx: &Context, interaction: &ModalInteraction) -> Result<()> {
         match interaction.data.custom_id.as_str() {
             commands::register::NAME => {
                 commands::register::modal(ctx, interaction, &self.pool).await
@@ -91,78 +67,82 @@ impl Handler {
         }
     }
 
-    async fn autocomplete(
-        &self,
-        ctx: &Context,
-        autocomplete: &AutocompleteInteraction,
-    ) -> Result<()> {
+    async fn autocomplete(&self, ctx: &Context, autocomplete: &CommandInteraction) -> Result<()> {
         match autocomplete.data.name.as_str() {
             commands::verify::NAME => {
                 commands::verify::autocomplete(ctx, autocomplete, &self.pool).await
             }
-            commands::cancel::NAME => {
-                commands::cancel::autocomplete(ctx, autocomplete, &self.pool).await
-            }
-            // commands::submitship::NAME => {
-            //     commands::submitship::autocomplete(ctx, autocomplete).await
-            // }
             _ => Ok(()),
         }
     }
 }
 
-#[async_trait]
+#[serenity::async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, _: Ready) {
-        Command::set_global_application_commands(&ctx.http, |command| {
-            command
-                .create_application_command(|command| commands::register::register(command))
-                .create_application_command(|command| commands::unregister::register(command))
-                .create_application_command(|command| commands::verify::register(command))
-                .create_application_command(|command| commands::cancel::register(command))
-                .create_application_command(|command| commands::status::register(command))
-                .create_application_command(|command| commands::card::register(command))
-                .create_application_command(|command| commands::message::register(command))
-                .create_application_command(|command| commands::roles::register(command))
-                .create_application_command(|command| commands::role::register(command))
-                .create_application_command(|command| commands::channel::register(command))
-                .create_application_command(|command| commands::rolestats::register(command))
-                .create_application_command(|command| commands::apply::register(command))
-                .create_application_command(|command| commands::unapply::register(command))
-                .create_application_command(|command| commands::disband::register(command))
-                .create_application_command(|command| commands::uids::register(command))
-                .create_application_command(|command| commands::update::register(command))
-            // .create_application_command(|command| commands::submitship::register(command))
-            // .create_application_command(|command| commands::shipstats::register(command))
-        })
+        Command::set_global_commands(
+            &ctx,
+            vec![
+                commands::register::register(),
+                commands::unregister::register(),
+                commands::verify::register(),
+                commands::status::register(),
+                commands::card::register(),
+                commands::message::register(),
+                commands::roles::register(),
+                commands::role::register(),
+                commands::channel::register(),
+                commands::rolestats::register(),
+                commands::apply::register(),
+                commands::unapply::register(),
+                commands::disband::register(),
+                commands::uids::register(),
+                commands::update::register(),
+            ],
+        )
         .await
         .unwrap();
 
-        ctx.set_activity(Activity::watching("Chive Hunters")).await;
+        ctx.set_activity(Some(ActivityData::watching("Chive Hunters")));
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         match interaction {
-            Interaction::ApplicationCommand(command) => {
+            Interaction::Command(command) => {
                 if let Err(e) = self.application_command(&ctx, &command).await {
                     command
-                        .create_followup_message(&ctx, |m| m.content(e).ephemeral(true))
+                        .create_followup(
+                            &ctx,
+                            CreateInteractionResponseFollowup::new()
+                                .content(e.to_string())
+                                .ephemeral(true),
+                        )
                         .await
                         .unwrap();
                 }
             }
-            Interaction::MessageComponent(interaction) => {
+            Interaction::Component(interaction) => {
                 if let Err(e) = self.message_component(&ctx, &interaction).await {
                     interaction
-                        .create_followup_message(&ctx, |m| m.content(e).ephemeral(true))
+                        .create_followup(
+                            &ctx,
+                            CreateInteractionResponseFollowup::new()
+                                .content(e.to_string())
+                                .ephemeral(true),
+                        )
                         .await
                         .unwrap();
                 }
             }
-            Interaction::ModalSubmit(interaction) => {
+            Interaction::Modal(interaction) => {
                 if let Err(e) = self.modal_submit(&ctx, &interaction).await {
                     interaction
-                        .create_followup_message(&ctx, |m| m.content(e).ephemeral(true))
+                        .create_followup(
+                            &ctx,
+                            CreateInteractionResponseFollowup::new()
+                                .content(e.to_string())
+                                .ephemeral(true),
+                        )
                         .await
                         .unwrap();
                 }

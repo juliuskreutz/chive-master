@@ -1,13 +1,11 @@
 use anyhow::{anyhow, Result};
 use serenity::{
-    builder::CreateApplicationCommand,
-    model::prelude::{
-        interaction::{
-            application_command::ApplicationCommandInteraction, InteractionResponseType,
-        },
-        RoleId,
+    all::{CommandInteraction, Mentionable, RoleId},
+    builder::{
+        CreateCommand, CreateInteractionResponse, CreateInteractionResponseFollowup,
+        CreateInteractionResponseMessage,
     },
-    prelude::{Context, Mentionable},
+    client::Context,
 };
 use sqlx::SqlitePool;
 
@@ -15,16 +13,14 @@ use crate::database;
 
 pub const NAME: &str = "roles";
 
-pub async fn command(
-    ctx: &Context,
-    command: &ApplicationCommandInteraction,
-    pool: &SqlitePool,
-) -> Result<()> {
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
     command
-        .create_interaction_response(ctx, |r| {
-            r.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-                .interaction_response_data(|d| d.ephemeral(true))
-        })
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
         .await?;
 
     let mut message = Vec::new();
@@ -34,7 +30,7 @@ pub async fn command(
     for data in roles {
         message.push(format!(
             "{} - {} - {}",
-            RoleId(data.role as u64).mention(),
+            RoleId::new(data.role as u64).mention(),
             data.chives,
             if data.permanent {
                 "Permanent"
@@ -49,15 +45,17 @@ pub async fn command(
     }
 
     command
-        .create_followup_message(ctx, |m| {
-            m.embed(|e| e.description(message.join("\n")))
-                .ephemeral(true)
-        })
+        .create_followup(
+            &ctx,
+            CreateInteractionResponseFollowup::new()
+                .content(message.join("\n"))
+                .ephemeral(true),
+        )
         .await?;
 
     Ok(())
 }
 
-pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-    command.name(NAME).description("Role breakpoints")
+pub fn register() -> CreateCommand {
+    CreateCommand::new(NAME).description("Role breakpoints")
 }

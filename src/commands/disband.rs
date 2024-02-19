@@ -2,17 +2,13 @@ use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use serenity::{
-    builder::CreateApplicationCommand,
-    model::{
-        prelude::{
-            interaction::{
-                application_command::ApplicationCommandInteraction, InteractionResponseType,
-            },
-            UserId,
-        },
-        Permissions,
+    all::{CommandInteraction, UserId},
+    builder::{
+        CreateCommand, CreateInteractionResponse, CreateInteractionResponseFollowup,
+        CreateInteractionResponseMessage, CreateMessage,
     },
-    prelude::Context,
+    client::Context,
+    model::Permissions,
 };
 use sqlx::SqlitePool;
 
@@ -20,19 +16,17 @@ use crate::database;
 
 pub const NAME: &str = "disband";
 
-pub async fn command(
-    ctx: &Context,
-    command: &ApplicationCommandInteraction,
-    pool: &SqlitePool,
-) -> Result<()> {
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
     command
-        .create_interaction_response(ctx, |r| {
-            r.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-                .interaction_response_data(|d| d.ephemeral(true))
-        })
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
         .await?;
 
-    let channel = command.channel_id.0 as i64;
+    let channel = command.channel_id.get() as i64;
 
     let Ok(db_match) = database::get_match_by_channel(channel, pool).await else {
         return Err(anyhow!(
@@ -44,18 +38,30 @@ pub async fn command(
 
     let text = "Your Support Contract with your partner has ended. If you would like to re-match with someone, please go back to https://discord.com/channels/1008493665116758167/1144488145228923020 and hit the Match button.";
 
-    if let Ok(channel) = UserId(db_match.user1 as u64).create_dm_channel(&ctx).await {
-        let _ = channel.send_message(ctx, |m| m.content(text)).await;
+    if let Ok(channel) = UserId::new(db_match.user1 as u64)
+        .create_dm_channel(&ctx)
+        .await
+    {
+        let _ = channel
+            .send_message(ctx, CreateMessage::new().content(text))
+            .await;
     }
 
-    if let Ok(channel) = UserId(db_match.user2 as u64).create_dm_channel(&ctx).await {
-        let _ = channel.send_message(ctx, |m| m.content(text)).await;
+    if let Ok(channel) = UserId::new(db_match.user2 as u64)
+        .create_dm_channel(&ctx)
+        .await
+    {
+        let _ = channel
+            .send_message(ctx, CreateMessage::new().content(text))
+            .await;
     }
 
     command
-        .create_followup_message(ctx, |m| {
-            m.content("Disbanded match. Channel will be deleted in 5s")
-        })
+        .create_followup(
+            &ctx,
+            CreateInteractionResponseFollowup::new()
+                .content("Disbanded match. Channel will be deleted in 5s"),
+        )
         .await?;
 
     {
@@ -72,9 +78,8 @@ pub async fn command(
     Ok(())
 }
 
-pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-    command
-        .name(NAME)
+pub fn register() -> CreateCommand {
+    CreateCommand::new(NAME)
         .description("Disband this match")
         .default_member_permissions(Permissions::ADMINISTRATOR)
 }

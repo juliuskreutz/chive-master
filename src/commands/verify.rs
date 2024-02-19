@@ -2,59 +2,38 @@ use std::collections::HashSet;
 
 use anyhow::{anyhow, Result};
 use serenity::{
-    builder::CreateApplicationCommand,
-    model::{
-        prelude::{
-            command::CommandOptionType,
-            interaction::{
-                application_command::{ApplicationCommandInteraction, CommandDataOptionValue},
-                autocomplete::AutocompleteInteraction,
-                InteractionResponseType,
-            },
-            UserId,
-        },
-        Permissions,
+    all::{CommandInteraction, CommandOptionType, UserId},
+    builder::{
+        CreateAutocompleteResponse, CreateCommand, CreateCommandOption, CreateInteractionResponse,
+        CreateInteractionResponseFollowup, CreateInteractionResponseMessage, CreateMessage,
     },
-    prelude::Context,
+    client::Context,
+    model::Permissions,
 };
 use sqlx::SqlitePool;
 
 use crate::{
     database::{self, DbConnection},
-    updater,
+    updater, GUILD_ID,
 };
 
 pub const NAME: &str = "verify";
 
-pub async fn command(
-    ctx: &Context,
-    command: &ApplicationCommandInteraction,
-    pool: &SqlitePool,
-) -> Result<()> {
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
     command
-        .create_interaction_response(ctx, |r| {
-            r.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-                .interaction_response_data(|d| d.ephemeral(true))
-        })
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
         .await?;
 
-    if command
-        .guild_id
-        .ok_or_else(|| anyhow!("Has to be used in guild"))?
-        .0
-        != 1008493665116758167
-    {
+    if command.guild_id != Some(GUILD_ID) {
         return Err(anyhow!("Has to be used in Meow Completionist Guild"));
     }
 
-    let option = command.data.options[0]
-        .resolved
-        .as_ref()
-        .ok_or_else(|| anyhow!("No option"))?;
-
-    let CommandDataOptionValue::Integer(uid) = *option else {
-        return Err(anyhow!("Not an integer"));
-    };
+    let uid = command.data.options[0].value.as_i64().unwrap();
 
     let vd = database::get_verification_by_uid(uid, pool).await?;
     database::delete_verification_by_uid(uid, pool).await?;
@@ -66,19 +45,19 @@ pub async fn command(
 
     updater::update_user_roles(user, &mut HashSet::new(), &ctx.http, pool).await?;
 
-    if let Ok(channel) = UserId(user as u64).create_dm_channel(&ctx).await {
+    if let Ok(channel) = UserId::new(user as u64).create_dm_channel(&ctx).await {
         let _ = channel
-            .send_message(&ctx, |m| {
-                m.content("Congratulations Completionist! You are now @Chive Verified and your profile will appear on the Chive Leaderboards: https://stardb.gg/leaderboard. You can change your HSR bio back to what it was originally. Additionally, you've gained access to the https://discord.com/channels/1008493665116758167/1108110331043123200 channel.")
-            })
+            .send_message(&ctx, CreateMessage::new().content("Congratulations Completionist! You are now @Chive Verified and your profile will appear on the Chive Leaderboards: https://stardb.gg/leaderboard. You can change your HSR bio back to what it was originally. Additionally, you've gained access to the https://discord.com/channels/1008493665116758167/1108110331043123200 channel."))
             .await;
     }
 
     command
-        .create_followup_message(ctx, |m| {
-            m.content(format!("Successfully verified {uid}"))
-                .ephemeral(true)
-        })
+        .create_followup(
+            &ctx,
+            CreateInteractionResponseFollowup::new()
+                .content(format!("Successfully verified {uid}"))
+                .ephemeral(true),
+        )
         .await?;
 
     Ok(())
@@ -86,15 +65,15 @@ pub async fn command(
 
 pub async fn autocomplete(
     ctx: &Context,
-    autocomplete: &AutocompleteInteraction,
+    autocomplete: &CommandInteraction,
     pool: &SqlitePool,
 ) -> Result<()> {
     let input = autocomplete
         .data
         .options
         .first()
-        .and_then(|o| o.value.as_ref())
-        .and_then(|o| o.as_str().map(|s| format!("{s}%")))
+        .and_then(|o| o.value.as_str())
+        .map(|s| format!("{s}%"))
         .unwrap_or("%".to_string());
 
     let vds = database::get_verifications_where_like(&input, pool).await?;
@@ -108,29 +87,26 @@ pub async fn autocomplete(
         choices.push((format!("{uid} - {user}"), uid));
     }
 
-    autocomplete
-        .create_autocomplete_response(ctx, |r| {
-            for choice in choices {
-                r.add_int_choice(choice.0, choice.1);
-            }
+    let mut response = CreateAutocompleteResponse::new();
 
-            r
-        })
+    for choice in choices {
+        response = response.add_int_choice(choice.0, choice.1);
+    }
+
+    autocomplete
+        .create_response(&ctx, CreateInteractionResponse::Autocomplete(response))
         .await?;
 
     Ok(())
 }
 
-pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-    command
-        .name(NAME)
+pub fn register() -> CreateCommand {
+    CreateCommand::new(NAME)
         .description("Verify a verification")
-        .create_option(|o| {
-            o.name("uid")
-                .description("Uid")
-                .kind(CommandOptionType::Integer)
+        .add_option(
+            CreateCommandOption::new(CommandOptionType::Integer, "uid", "Uid")
                 .required(true)
-                .set_autocomplete(true)
-        })
+                .set_autocomplete(true),
+        )
         .default_member_permissions(Permissions::ADMINISTRATOR)
 }

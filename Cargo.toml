@@ -16,7 +16,7 @@ image = "ubuntu:22.04"
 tokio = { version = "1.36.0", default-features = false, features = [
     "rt-multi-thread",
 ] }
-serenity = { version = "0.11.7", default-features = false, features = [
+serenity = { version = "0.12.0", default-features = false, features = [
     "client",
     "gateway",
     "model",
@@ -34,4 +34,4 @@ rand = "0.8.5"
 anyhow = "1.0.79"
 dotenv = "0.15.0"
 url = "2.5.0"
-chrono = "0.4.33"
+chrono = "0.4.34"
