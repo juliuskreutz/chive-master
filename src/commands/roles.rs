@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use serenity::{
     all::{CommandInteraction, Mentionable, RoleId},
     builder::{
-        CreateCommand, CreateInteractionResponse, CreateInteractionResponseFollowup,
+        CreateCommand, CreateEmbed, CreateInteractionResponse, CreateInteractionResponseFollowup,
         CreateInteractionResponseMessage,
     },
     client::Context,
@@ -48,7 +48,7 @@ pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqliteP
         .create_followup(
             &ctx,
             CreateInteractionResponseFollowup::new()
-                .content(message.join("\n"))
+                .embed(CreateEmbed::new().description(message.join("\n")))
                 .ephemeral(true),
         )
         .await?;
