@@ -70,7 +70,7 @@ async fn add(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> 
         return Err(anyhow!("Not a subcommand"));
     };
 
-    let emoji = options[0].value.as_str().unwrap();
+    let emoji = options[0].value.as_str().unwrap().trim();
 
     if emoji.starts_with('<') {
         return Err(anyhow!("Invalid emoji"));
