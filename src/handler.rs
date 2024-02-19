@@ -37,6 +37,7 @@ impl Handler {
             commands::unapply::NAME => commands::unapply::command(ctx, command, &self.pool).await,
             commands::disband::NAME => commands::disband::command(ctx, command, &self.pool).await,
             commands::uids::NAME => commands::uids::command(ctx, command, &self.pool).await,
+            commands::sniff::NAME => commands::sniff::command(ctx, command, &self.pool).await,
             commands::update::NAME => commands::update::command(ctx, command, &self.pool).await,
             commands::blacklist::NAME => {
                 commands::blacklist::command(ctx, command, &self.pool).await
@@ -105,6 +106,7 @@ impl EventHandler for Handler {
                 commands::unapply::register(),
                 commands::disband::register(),
                 commands::uids::register(),
+                commands::sniff::register(),
                 commands::update::register(),
                 commands::blacklist::register(),
             ],
