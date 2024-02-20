@@ -15,3 +15,5 @@ pub mod unapply;
 pub mod unregister;
 pub mod update;
 pub mod verify;
+pub mod warn;
+

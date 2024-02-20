@@ -42,6 +42,7 @@ impl Handler {
             commands::blacklist::NAME => {
                 commands::blacklist::command(ctx, command, &self.pool).await
             }
+            commands::warn::NAME => commands::warn::command(ctx, command, &self.pool).await,
             _ => Ok(()),
         }
     }
@@ -109,6 +110,7 @@ impl EventHandler for Handler {
                 commands::sniff::register(),
                 commands::update::register(),
                 commands::blacklist::register(),
+                commands::warn::register(),
             ],
         )
         .await
