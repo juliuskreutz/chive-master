@@ -81,7 +81,7 @@ pub async fn command(ctx: &Context, command: &CommandInteraction, _: &SqlitePool
                     if dmed {
                         "and dmed"
                     } else {
-                        "BUT DID NOTT GET A DM"
+                        "BUT DID NOT GET A DM"
                     }
                 ))
                 .ephemeral(true),
