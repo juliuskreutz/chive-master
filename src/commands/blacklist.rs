@@ -70,17 +70,10 @@ async fn add(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> 
         return Err(anyhow!("Not a subcommand"));
     };
 
-    let emoji = options[0]
-        .value
-        .as_str()
-        .unwrap()
-        .trim()
-        .chars()
-        .next()
-        .unwrap();
+    let emoji = options[0].value.as_str().unwrap().trim();
 
-    if !unic_emoji_char::is_emoji(emoji) {
-        return Err(anyhow!("Not an emoji"));
+    if emoji.is_empty() {
+        return Err(anyhow!("Emoji cannot be empty"));
     }
 
     let blacklist = database::BlacklistData::new(emoji.to_string());

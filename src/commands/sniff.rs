@@ -52,5 +52,5 @@ pub fn register() -> CreateCommand {
             CreateCommandOption::new(CommandOptionType::User, "user", "User").required(true),
         )
         .description("Get connected uids of a user")
-        .default_member_permissions(Permissions::ADMINISTRATOR)
+        .default_member_permissions(Permissions::MANAGE_NICKNAMES)
 }

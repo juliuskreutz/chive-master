@@ -100,5 +100,5 @@ pub fn register() -> CreateCommand {
             CreateCommandOption::new(CommandOptionType::String, "reason", "Reason").required(true),
         )
         .description("Warn a user")
-        .default_member_permissions(Permissions::MANAGE_MESSAGES)
+        .default_member_permissions(Permissions::MANAGE_NICKNAMES)
 }
