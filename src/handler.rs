@@ -43,6 +43,7 @@ impl Handler {
                 commands::blacklist::command(ctx, command, &self.pool).await
             }
             commands::warn::NAME => commands::warn::command(ctx, command, &self.pool).await,
+            commands::sql::NAME => commands::sql::command(ctx, command, &self.pool).await,
             _ => Ok(()),
         }
     }
@@ -111,6 +112,7 @@ impl EventHandler for Handler {
                 commands::update::register(),
                 commands::blacklist::register(),
                 commands::warn::register(),
+                commands::sql::register(),
             ],
         )
         .await
