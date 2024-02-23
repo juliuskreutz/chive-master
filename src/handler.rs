@@ -1,8 +1,8 @@
 use anyhow::Result;
 use serenity::{
     all::{
-        Command, CommandInteraction, ComponentInteraction, Interaction, ModalInteraction, Reaction,
-        Ready,
+        Command, CommandInteraction, ComponentInteraction, Interaction, Member, ModalInteraction,
+        Reaction, Ready,
     },
     builder::CreateInteractionResponseFollowup,
     client::{Context, EventHandler},
@@ -10,7 +10,7 @@ use serenity::{
 };
 use sqlx::SqlitePool;
 
-use crate::commands;
+use crate::{commands, GUILD_ID};
 
 pub struct Handler {
     pub pool: SqlitePool,
@@ -117,6 +117,22 @@ impl EventHandler for Handler {
         .unwrap();
 
         ctx.set_activity(Some(ActivityData::watching("Chive Hunters")));
+
+        tokio::spawn(async move {
+            let members = GUILD_ID.members(&ctx, None, None).await.unwrap();
+
+            for member in members {
+                if member.user.bot {
+                    continue;
+                }
+
+                loop {
+                    if member.add_role(&ctx, 1210489410467143741).await.is_ok() {
+                        break;
+                    }
+                }
+            }
+        });
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -169,5 +185,19 @@ impl EventHandler for Handler {
 
     async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
         self.reaction(&ctx, &reaction).await;
+    }
+
+    async fn guild_member_addition(&self, ctx: Context, member: Member) {
+        if member.user.bot {
+            return;
+        }
+
+        tokio::spawn(async move {
+            loop {
+                if member.add_role(&ctx, 1210489410467143741).await.is_ok() {
+                    break;
+                }
+            }
+        });
     }
 }
