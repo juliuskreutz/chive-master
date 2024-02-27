@@ -304,16 +304,24 @@ async fn add_member_role(
     http: &Arc<Http>,
     pool: &SqlitePool,
 ) -> Result<()> {
-    if member
-        .add_role(http, RoleId::new(role as u64))
-        .await
-        .is_err()
-        && d.insert(role)
-    {
-        log(&format!( "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>", role), http) .await;
-
-        database::delete_role_by_role(role, pool).await?;
+    if d.contains(&role) {
+        return Ok(());
     }
+
+    for _ in 0..3 {
+        if member
+            .add_role(http, RoleId::new(role as u64))
+            .await
+            .is_ok()
+        {
+            return Ok(());
+        }
+    }
+
+    d.insert(role);
+    log(&format!( "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>", role), http) .await;
+
+    database::delete_role_by_role(role, pool).await?;
 
     Ok(())
 }
