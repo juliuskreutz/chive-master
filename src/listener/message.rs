@@ -11,32 +11,32 @@ use serenity::{
 };
 use sqlx::SqlitePool;
 
-use super::{apply, register, unapply};
+pub struct Message;
 
-pub const NAME: &str = "message";
-
-pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
-    match command.data.options[0].name.as_str() {
-        "verify" => verify(ctx, command, pool).await,
-        "match" => r#match(ctx, command, pool).await,
-        _ => Err(anyhow!("Not a subcommand")),
+impl super::Listener for Message {
+    fn register(name: &str) -> CreateCommand {
+        CreateCommand::new(name)
+            .description("Message")
+            .add_option(CreateCommandOption::new(
+                CommandOptionType::SubCommand,
+                "verify",
+                "Verify message",
+            ))
+            .add_option(CreateCommandOption::new(
+                CommandOptionType::SubCommand,
+                "match",
+                "Match message",
+            ))
+            .default_member_permissions(Permissions::ADMINISTRATOR)
     }
-}
 
-pub fn register() -> CreateCommand {
-    CreateCommand::new(NAME)
-        .description("Message")
-        .add_option(CreateCommandOption::new(
-            CommandOptionType::SubCommand,
-            "verify",
-            "Verify message",
-        ))
-        .add_option(CreateCommandOption::new(
-            CommandOptionType::SubCommand,
-            "match",
-            "Match message",
-        ))
-        .default_member_permissions(Permissions::ADMINISTRATOR)
+    async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
+        match command.data.options[0].name.as_str() {
+            "verify" => verify(ctx, command, pool).await,
+            "match" => r#match(ctx, command, pool).await,
+            _ => Err(anyhow!("Not a subcommand")),
+        }
+    }
 }
 
 async fn verify(ctx: &Context, command: &CommandInteraction, _: &SqlitePool) -> Result<()> {
@@ -60,7 +60,7 @@ async fn verify(ctx: &Context, command: &CommandInteraction, _: &SqlitePool) -> 
             CreateMessage::new()
                 .embed(embed)
                 .components(vec![CreateActionRow::Buttons(vec![CreateButton::new(
-                    register::NAME,
+                    super::ListenerName::Register.to_string(),
                 )
                 .label("Register")
                 .style(ButtonStyle::Primary)])]),
@@ -100,10 +100,10 @@ async fn r#match(ctx: &Context, command: &CommandInteraction, _: &SqlitePool) ->
             CreateMessage::new()
                 .embed(embed)
                 .components(vec![CreateActionRow::Buttons(vec![
-                    CreateButton::new(apply::NAME)
+                    CreateButton::new(super::ListenerName::Apply.to_string())
                         .label("Apply")
                         .style(ButtonStyle::Primary),
-                    CreateButton::new(unapply::NAME)
+                    CreateButton::new(super::ListenerName::Unapply.to_string())
                         .label("Unapply")
                         .style(ButtonStyle::Danger),
                 ])]),

@@ -1,23 +1,17 @@
 use anyhow::Result;
 use sqlx::SqlitePool;
 
-pub struct ChannelData {
+pub struct DbChannel {
     pub channel: i64,
 }
 
-impl ChannelData {
-    pub fn new(channel: i64) -> Self {
-        Self { channel }
-    }
-}
-
-pub async fn get_channels(pool: &SqlitePool) -> Result<Vec<ChannelData>> {
-    Ok(sqlx::query_as!(ChannelData, "SELECT * FROM channels")
+pub async fn get_channels(pool: &SqlitePool) -> Result<Vec<DbChannel>> {
+    Ok(sqlx::query_as!(DbChannel, "SELECT * FROM channels")
         .fetch_all(pool)
         .await?)
 }
 
-pub async fn set_channel(channel: ChannelData, pool: &SqlitePool) -> Result<()> {
+pub async fn set_channel(channel: DbChannel, pool: &SqlitePool) -> Result<()> {
     sqlx::query!(
         "INSERT OR REPLACE INTO channels(channel) VALUES(?)",
         channel.channel

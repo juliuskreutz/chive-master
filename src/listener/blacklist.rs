@@ -12,48 +12,64 @@ use sqlx::SqlitePool;
 
 use crate::database;
 
-pub const NAME: &str = "blacklist";
+pub struct Blacklist;
 
-pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
-    match command.data.options[0].name.as_str() {
-        "add" => add(ctx, command, pool).await,
-        "remove" => remove(ctx, command, pool).await,
-        "list" => list(ctx, command, pool).await,
-        _ => Err(anyhow!("Not a subcommand")),
+impl super::Listener for Blacklist {
+    fn register(name: &str) -> CreateCommand {
+        CreateCommand::new(name)
+            .description("Role management")
+            .add_option(
+                CreateCommandOption::new(
+                    CommandOptionType::SubCommand,
+                    "add",
+                    "Add an emoji to the blacklist",
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::String, "emoji", "Emoji")
+                        .required(true),
+                ),
+            )
+            .add_option(
+                CreateCommandOption::new(
+                    CommandOptionType::SubCommand,
+                    "remove",
+                    "Remove an emoji from the blacklist",
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::String, "emoji", "Emoji")
+                        .required(true),
+                ),
+            )
+            .add_option(CreateCommandOption::new(
+                CommandOptionType::SubCommand,
+                "list",
+                "List blacklist",
+            ))
+            .default_member_permissions(Permissions::ADMINISTRATOR)
     }
-}
 
-pub fn register() -> CreateCommand {
-    CreateCommand::new(NAME)
-        .description("Role management")
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "add",
-                "Add an emoji to the blacklist",
-            )
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::String, "emoji", "Emoji")
-                    .required(true),
-            ),
-        )
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "remove",
-                "Remove an emoji from the blacklist",
-            )
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::String, "emoji", "Emoji")
-                    .required(true),
-            ),
-        )
-        .add_option(CreateCommandOption::new(
-            CommandOptionType::SubCommand,
-            "list",
-            "List blacklist",
-        ))
-        .default_member_permissions(Permissions::ADMINISTRATOR)
+    async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
+        match command.data.options[0].name.as_str() {
+            "add" => add(ctx, command, pool).await,
+            "remove" => remove(ctx, command, pool).await,
+            "list" => list(ctx, command, pool).await,
+            _ => Err(anyhow!("Not a subcommand")),
+        }
+    }
+
+    async fn reaction_add(ctx: &Context, reaction: &Reaction, pool: &SqlitePool) -> Result<()> {
+        if let ReactionType::Unicode(emoji) = &reaction.emoji {
+            if database::get_blacklist(pool)
+                .await?
+                .iter()
+                .any(|b| &b.emoji == emoji)
+            {
+                reaction.delete(&ctx).await?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 async fn add(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
@@ -76,7 +92,9 @@ async fn add(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> 
         return Err(anyhow!("Emoji cannot be empty"));
     }
 
-    let blacklist = database::BlacklistData::new(emoji.to_string());
+    let blacklist = database::DbBlacklist {
+        emoji: emoji.to_string(),
+    };
     database::set_emoji(blacklist, pool).await?;
 
     command
@@ -151,17 +169,4 @@ async fn list(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) ->
         .await?;
 
     Ok(())
-}
-
-pub async fn reaction(ctx: &Context, reaction: &Reaction, pool: &SqlitePool) {
-    if let ReactionType::Unicode(emoji) = &reaction.emoji {
-        if database::get_blacklist(pool)
-            .await
-            .unwrap()
-            .iter()
-            .any(|b| &b.emoji == emoji)
-        {
-            reaction.delete(&ctx).await.unwrap();
-        }
-    }
 }

@@ -10,50 +10,54 @@ use serenity::{
 };
 use sqlx::SqlitePool;
 
-use crate::database::{self, RoleData};
+use crate::database;
 
-pub const NAME: &str = "role";
+pub struct Role;
 
-pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
-    match command.data.options[0].name.as_str() {
-        "set" => set(ctx, command, pool).await,
-        "delete" => delete(ctx, command, pool).await,
-        _ => Err(anyhow!("Not a subcommand")),
+impl super::Listener for Role {
+    fn register(name: &str) -> CreateCommand {
+        CreateCommand::new(name)
+            .description("Role management")
+            .add_option(
+                CreateCommandOption::new(
+                    CommandOptionType::SubCommand,
+                    "set",
+                    "Set a role breakpoint",
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::Role, "role", "Role")
+                        .required(true),
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::Integer, "chives", "Chives")
+                        .required(true),
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::Boolean, "permanent", "Permanent")
+                        .required(true),
+                ),
+            )
+            .add_option(
+                CreateCommandOption::new(
+                    CommandOptionType::SubCommand,
+                    "delete",
+                    "Delete a role breakpoint",
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::Role, "role", "Role")
+                        .required(true),
+                ),
+            )
+            .default_member_permissions(Permissions::MANAGE_ROLES)
     }
-}
 
-pub fn register() -> CreateCommand {
-    CreateCommand::new(NAME)
-        .description("Role management")
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "set",
-                "Set a role breakpoint",
-            )
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::Role, "role", "Role").required(true),
-            )
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::Integer, "chives", "Chives")
-                    .required(true),
-            )
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::Boolean, "permanent", "Permanent")
-                    .required(true),
-            ),
-        )
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "delete",
-                "Delete a role breakpoint",
-            )
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::Role, "role", "Role").required(true),
-            ),
-        )
-        .default_member_permissions(Permissions::MANAGE_ROLES)
+    async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
+        match command.data.options[0].name.as_str() {
+            "set" => set(ctx, command, pool).await,
+            "delete" => delete(ctx, command, pool).await,
+            _ => Err(anyhow!("Not a subcommand")),
+        }
+    }
 }
 
 async fn set(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
@@ -74,9 +78,12 @@ async fn set(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> 
     let chives = options[1].value.as_i64().unwrap();
     let permanent = options[2].value.as_bool().unwrap();
 
-    let data = RoleData::new(role_id.get() as i64, chives, permanent);
-
-    database::set_role(&data, pool).await?;
+    let role = database::DbRole {
+        role: role_id.get() as i64,
+        chives,
+        permanent,
+    };
+    database::set_role(&role, pool).await?;
 
     command
         .create_followup(

@@ -2,7 +2,7 @@ use anyhow::Result;
 use chrono::NaiveDateTime;
 use sqlx::SqlitePool;
 
-pub struct VerificationData {
+pub struct DbVerification {
     pub uid: i64,
     pub user: i64,
     pub name: String,
@@ -10,29 +10,17 @@ pub struct VerificationData {
     pub timestamp: NaiveDateTime,
 }
 
-impl VerificationData {
-    pub fn new(uid: i64, user: i64, name: String, otp: String, timestamp: NaiveDateTime) -> Self {
-        Self {
-            uid,
-            user,
-            name,
-            otp,
-            timestamp,
-        }
-    }
-}
-
-pub async fn get_verifications(pool: &SqlitePool) -> Result<Vec<VerificationData>> {
+pub async fn get_verifications(pool: &SqlitePool) -> Result<Vec<DbVerification>> {
     Ok(
-        sqlx::query_as!(VerificationData, "SELECT * FROM verifications")
+        sqlx::query_as!(DbVerification, "SELECT * FROM verifications")
             .fetch_all(pool)
             .await?,
     )
 }
 
-pub async fn get_verification_by_uid(uid: i64, pool: &SqlitePool) -> Result<VerificationData> {
+pub async fn get_verification_by_uid(uid: i64, pool: &SqlitePool) -> Result<DbVerification> {
     Ok(sqlx::query_as!(
-        VerificationData,
+        DbVerification,
         "SELECT * FROM verifications WHERE uid = ?1",
         uid
     )
@@ -43,9 +31,9 @@ pub async fn get_verification_by_uid(uid: i64, pool: &SqlitePool) -> Result<Veri
 pub async fn get_verifications_by_user(
     user: i64,
     pool: &SqlitePool,
-) -> Result<Vec<VerificationData>> {
+) -> Result<Vec<DbVerification>> {
     Ok(sqlx::query_as!(
-        VerificationData,
+        DbVerification,
         "SELECT * FROM verifications WHERE user == ?1",
         user
     )
@@ -56,9 +44,9 @@ pub async fn get_verifications_by_user(
 pub async fn get_verifications_where_like(
     input: &str,
     pool: &SqlitePool,
-) -> Result<Vec<VerificationData>> {
+) -> Result<Vec<DbVerification>> {
     Ok(sqlx::query_as!(
-        VerificationData,
+        DbVerification,
         "SELECT * FROM verifications WHERE uid LIKE ?1 OR name LIKE ?1 LIMIT 25",
         input
     )
@@ -66,7 +54,7 @@ pub async fn get_verifications_where_like(
     .await?)
 }
 
-pub async fn set_verification(data: &VerificationData, pool: &SqlitePool) -> Result<()> {
+pub async fn set_verification(data: &DbVerification, pool: &SqlitePool) -> Result<()> {
     sqlx::query!(
         "INSERT OR REPLACE INTO verifications(uid, user, name, otp, timestamp) VALUES(?, ?, ?, ?, ?)",
         data.uid,

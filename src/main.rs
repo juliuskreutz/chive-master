@@ -1,15 +1,17 @@
-mod commands;
 mod database;
 mod handler;
+mod listener;
 mod stardb;
 mod updater;
 
-use std::{env, str::FromStr};
+use std::{collections::HashMap, env, str::FromStr};
 
 use anyhow::Result;
 use dotenv::dotenv;
+use listener::ListenerName;
 use serenity::{all::GuildId, prelude::GatewayIntents, Client};
 use sqlx::{sqlite::SqliteConnectOptions, SqlitePool};
+use strum::IntoEnumIterator;
 
 use crate::handler::Handler;
 
@@ -26,17 +28,19 @@ async fn main() -> Result<()> {
     let pool = SqlitePool::connect_with(options).await?;
     sqlx::migrate!().run(&pool).await?;
 
-    let mut client = loop {
-        if let Ok(client) = Client::builder(
-            &discord_token,
-            GatewayIntents::non_privileged() | GatewayIntents::GUILD_MEMBERS,
-        )
-        .event_handler(Handler { pool: pool.clone() })
-        .await
-        {
-            break client;
-        }
-    };
+    let listeners = ListenerName::iter()
+        .map(|l| (l.to_string(), l))
+        .collect::<HashMap<_, _>>();
+
+    let mut client = Client::builder(
+        &discord_token,
+        GatewayIntents::non_privileged() | GatewayIntents::GUILD_MEMBERS,
+    )
+    .event_handler(Handler {
+        listeners,
+        pool: pool.clone(),
+    })
+    .await?;
 
     updater::init(client.http.clone(), pool);
 

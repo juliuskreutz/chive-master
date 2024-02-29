@@ -10,33 +10,34 @@ use serenity::{
 };
 use sqlx::SqlitePool;
 
-use crate::database::{self, ChannelData};
+use crate::database;
 
-pub const NAME: &str = "channel";
+pub struct Channel;
 
-pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
-    match command.data.options[0].name.as_str() {
-        "enable" => enable(ctx, command, pool).await,
-        "disable" => disable(ctx, command, pool).await,
-        _ => Err(anyhow!("Not a subcommand")),
+impl super::Listener for Channel {
+    fn register(name: &str) -> CreateCommand {
+        CreateCommand::new(name)
+            .description("Channel management")
+            .add_option(CreateCommandOption::new(
+                CommandOptionType::SubCommand,
+                "enable",
+                "Enable current channel as update channel",
+            ))
+            .add_option(CreateCommandOption::new(
+                CommandOptionType::SubCommand,
+                "disable",
+                "Disable current channel as update channel",
+            ))
+            .default_member_permissions(Permissions::ADMINISTRATOR)
     }
-}
 
-pub fn register() -> CreateCommand {
-    CreateCommand::new(NAME)
-        .description("Channel management")
-        // add option with new api
-        .add_option(CreateCommandOption::new(
-            CommandOptionType::SubCommand,
-            "enable",
-            "Enable current channel as update channel",
-        ))
-        .add_option(CreateCommandOption::new(
-            CommandOptionType::SubCommand,
-            "disable",
-            "Disable current channel as update channel",
-        ))
-        .default_member_permissions(Permissions::ADMINISTRATOR)
+    async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
+        match command.data.options[0].name.as_str() {
+            "enable" => enable(ctx, command, pool).await,
+            "disable" => disable(ctx, command, pool).await,
+            _ => Err(anyhow!("Not a subcommand")),
+        }
+    }
 }
 
 async fn enable(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
@@ -53,7 +54,10 @@ async fn enable(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) 
         return Err(anyhow!("This command has to be in a guild"));
     }
 
-    database::set_channel(ChannelData::new(command.channel_id.get() as i64), pool).await?;
+    let channel = database::DbChannel {
+        channel: command.channel_id.get() as i64,
+    };
+    database::set_channel(channel, pool).await?;
 
     // rewritten using new api
     command
