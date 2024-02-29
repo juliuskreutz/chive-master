@@ -316,6 +316,8 @@ async fn add_member_role(
         {
             return Ok(());
         }
+
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     }
 
     d.insert(role);
