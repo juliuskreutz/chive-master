@@ -308,7 +308,7 @@ async fn add_member_role(
         return Ok(());
     }
 
-    for _ in 0..3 {
+    for _ in 0..5 {
         if member
             .add_role(http, RoleId::new(role as u64))
             .await
