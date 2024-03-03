@@ -5,6 +5,7 @@ mod card;
 mod channel;
 mod disband;
 mod message;
+mod purge;
 mod register;
 mod role;
 mod roles;
@@ -107,6 +108,7 @@ pub enum ListenerName {
     Update,
     Verify,
     Warn,
+    Purge,
 }
 
 impl ListenerName {
@@ -132,6 +134,7 @@ impl ListenerName {
             ListenerName::Update => update::Update::register(&self.to_string()),
             ListenerName::Verify => verify::Verify::register(&self.to_string()),
             ListenerName::Warn => warn::Warn::register(&self.to_string()),
+            ListenerName::Purge => purge::Purge::register(&self.to_string()),
         }
     }
 
@@ -162,6 +165,7 @@ impl ListenerName {
             ListenerName::Update => update::Update::command(ctx, command, pool).await,
             ListenerName::Verify => verify::Verify::command(ctx, command, pool).await,
             ListenerName::Warn => warn::Warn::command(ctx, command, pool).await,
+            ListenerName::Purge => purge::Purge::command(ctx, command, pool).await,
         }
     }
 
@@ -198,6 +202,7 @@ impl ListenerName {
             ListenerName::Update => update::Update::component(ctx, interaction, pool).await,
             ListenerName::Verify => verify::Verify::component(ctx, interaction, pool).await,
             ListenerName::Warn => warn::Warn::component(ctx, interaction, pool).await,
+            ListenerName::Purge => purge::Purge::component(ctx, interaction, pool).await,
         }
     }
 
@@ -228,6 +233,7 @@ impl ListenerName {
             ListenerName::Update => update::Update::modal(ctx, interaction, pool).await,
             ListenerName::Verify => verify::Verify::modal(ctx, interaction, pool).await,
             ListenerName::Warn => warn::Warn::modal(ctx, interaction, pool).await,
+            ListenerName::Purge => purge::Purge::modal(ctx, interaction, pool).await,
         }
     }
 
@@ -260,6 +266,7 @@ impl ListenerName {
             ListenerName::Update => update::Update::autocomplete(ctx, command, pool).await,
             ListenerName::Verify => verify::Verify::autocomplete(ctx, command, pool).await,
             ListenerName::Warn => warn::Warn::autocomplete(ctx, command, pool).await,
+            ListenerName::Purge => purge::Purge::autocomplete(ctx, command, pool).await,
         }
     }
 
@@ -296,6 +303,7 @@ impl ListenerName {
             ListenerName::Update => update::Update::reaction_add(ctx, reaction, pool).await,
             ListenerName::Verify => verify::Verify::reaction_add(ctx, reaction, pool).await,
             ListenerName::Warn => warn::Warn::reaction_add(ctx, reaction, pool).await,
+            ListenerName::Purge => purge::Purge::reaction_add(ctx, reaction, pool).await,
         }
     }
 
@@ -333,6 +341,7 @@ impl ListenerName {
             ListenerName::Update => update::Update::ban_add(ctx, guild_id, user, pool).await,
             ListenerName::Verify => verify::Verify::ban_add(ctx, guild_id, user, pool).await,
             ListenerName::Warn => warn::Warn::ban_add(ctx, guild_id, user, pool).await,
+            ListenerName::Purge => purge::Purge::ban_add(ctx, guild_id, user, pool).await,
         }
     }
 
@@ -372,6 +381,7 @@ impl ListenerName {
             ListenerName::Update => update::Update::ban_remove(ctx, guild_id, user, pool).await,
             ListenerName::Verify => verify::Verify::ban_remove(ctx, guild_id, user, pool).await,
             ListenerName::Warn => warn::Warn::ban_remove(ctx, guild_id, user, pool).await,
+            ListenerName::Purge => purge::Purge::ban_remove(ctx, guild_id, user, pool).await,
         }
     }
 }
