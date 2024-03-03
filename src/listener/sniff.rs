@@ -12,47 +12,43 @@ use sqlx::SqlitePool;
 
 use crate::database;
 
-pub struct Sniff;
+pub fn register(name: &str) -> CreateCommand {
+    CreateCommand::new(name)
+        .description("Get connected uids of a user")
+        .add_option(
+            CreateCommandOption::new(CommandOptionType::User, "user", "User").required(true),
+        )
+        .default_member_permissions(Permissions::MANAGE_NICKNAMES)
+}
 
-impl super::Listener for Sniff {
-    fn register(name: &str) -> CreateCommand {
-        CreateCommand::new(name)
-            .description("Get connected uids of a user")
-            .add_option(
-                CreateCommandOption::new(CommandOptionType::User, "user", "User").required(true),
-            )
-            .default_member_permissions(Permissions::MANAGE_NICKNAMES)
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
+    command
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
+        .await?;
+
+    let user_id = command.data.options[0].value.as_user_id().unwrap().get() as i64;
+
+    let connections = database::get_connections_by_user(user_id, pool).await?;
+
+    if connections.is_empty() {
+        return Err(anyhow!("This user has no connected uids"));
     }
 
-    async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
+    for connection in connections {
         command
-            .create_response(
+            .create_followup(
                 &ctx,
-                CreateInteractionResponse::Defer(
-                    CreateInteractionResponseMessage::new().ephemeral(true),
-                ),
+                CreateInteractionResponseFollowup::new()
+                    .content(connection.uid.to_string())
+                    .ephemeral(true),
             )
             .await?;
-
-        let user_id = command.data.options[0].value.as_user_id().unwrap().get() as i64;
-
-        let connections = database::get_connections_by_user(user_id, pool).await?;
-
-        if connections.is_empty() {
-            return Err(anyhow!("This user has no connected uids"));
-        }
-
-        for connection in connections {
-            command
-                .create_followup(
-                    &ctx,
-                    CreateInteractionResponseFollowup::new()
-                        .content(connection.uid.to_string())
-                        .ephemeral(true),
-                )
-                .await?;
-        }
-
-        Ok(())
     }
+
+    Ok(())
 }

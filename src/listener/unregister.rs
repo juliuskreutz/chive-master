@@ -11,56 +11,51 @@ use sqlx::SqlitePool;
 
 use crate::database;
 
-pub struct Unregister;
+pub fn register(name: &str) -> CreateCommand {
+    CreateCommand::new(name)
+        .description("Unregister your uid")
+        .add_option(
+            CreateCommandOption::new(CommandOptionType::Integer, "uid", "Your uid").required(true),
+        )
+}
 
-impl super::Listener for Unregister {
-    fn register(name: &str) -> CreateCommand {
-        CreateCommand::new(name)
-            .description("Unregister your uid")
-            .add_option(
-                CreateCommandOption::new(CommandOptionType::Integer, "uid", "Your uid")
-                    .required(true),
-            )
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
+    command
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
+        .await?;
+
+    let uid = command.data.options[0].value.as_i64().unwrap();
+
+    let user = command.user.id.get() as i64;
+    let scores = database::get_connections_by_user(user, pool).await?;
+
+    if !scores.iter().any(|s| s.uid == uid) {
+        return Err(anyhow!("This uid is not connected to your account"));
     }
 
-    async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
-        command
-            .create_response(
-                &ctx,
-                CreateInteractionResponse::Defer(
-                    CreateInteractionResponseMessage::new().ephemeral(true),
-                ),
-            )
-            .await?;
+    database::delete_connection_by_uid(uid, pool).await?;
 
-        let uid = command.data.options[0].value.as_i64().unwrap();
+    if let Some(member) = command.member.clone() {
+        let roles = database::get_roles(pool).await?;
 
-        let user = command.user.id.get() as i64;
-        let scores = database::get_connections_by_user(user, pool).await?;
-
-        if !scores.iter().any(|s| s.uid == uid) {
-            return Err(anyhow!("This uid is not connected to your account"));
+        for role in roles {
+            let _ = member
+                .remove_role(&ctx, RoleId::new(role.role as u64))
+                .await;
         }
-
-        database::delete_connection_by_uid(uid, pool).await?;
-
-        if let Some(member) = command.member.clone() {
-            let roles = database::get_roles(pool).await?;
-
-            for role in roles {
-                let _ = member
-                    .remove_role(&ctx, RoleId::new(role.role as u64))
-                    .await;
-            }
-        }
-
-        command
-            .create_followup(
-                &ctx,
-                CreateInteractionResponseFollowup::new().content("Successfully unregistered uid"),
-            )
-            .await?;
-
-        Ok(())
     }
+
+    command
+        .create_followup(
+            &ctx,
+            CreateInteractionResponseFollowup::new().content("Successfully unregistered uid"),
+        )
+        .await?;
+
+    Ok(())
 }

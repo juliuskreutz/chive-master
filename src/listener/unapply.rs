@@ -11,82 +11,78 @@ use sqlx::SqlitePool;
 
 use crate::database;
 
-pub struct Unapply;
+pub fn register(name: &str) -> CreateCommand {
+    CreateCommand::new(name).description("Stop matching :(")
+}
 
-impl super::Listener for Unapply {
-    fn register(name: &str) -> CreateCommand {
-        CreateCommand::new(name).description("Stop matching :(")
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
+    command
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
+        .await?;
+
+    let user = command.user.id.get() as i64;
+
+    if database::get_match_by_user(user, pool).await.is_ok() {
+        return Err(anyhow!("You are already in a match!"));
     }
 
-    async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
-        command
-            .create_response(
-                &ctx,
-                CreateInteractionResponse::Defer(
-                    CreateInteractionResponseMessage::new().ephemeral(true),
-                ),
-            )
-            .await?;
-
-        let user = command.user.id.get() as i64;
-
-        if database::get_match_by_user(user, pool).await.is_ok() {
-            return Err(anyhow!("You are already in a match!"));
-        }
-
-        if database::get_candidate_by_user(user, pool).await.is_err() {
-            return Err(anyhow!("You are not matching!"));
-        }
-
-        database::delete_candidate_by_user(user, pool).await?;
-
-        command
-            .create_followup(
-                &ctx,
-                CreateInteractionResponseFollowup::new()
-                    .content("No longer matching")
-                    .ephemeral(true),
-            )
-            .await?;
-
-        Ok(())
+    if database::get_candidate_by_user(user, pool).await.is_err() {
+        return Err(anyhow!("You are not matching!"));
     }
 
-    async fn component(
-        ctx: &Context,
-        interaction: &ComponentInteraction,
-        pool: &SqlitePool,
-    ) -> Result<()> {
-        interaction
-            .create_response(
-                &ctx,
-                CreateInteractionResponse::Defer(
-                    CreateInteractionResponseMessage::new().ephemeral(true),
-                ),
-            )
-            .await?;
+    database::delete_candidate_by_user(user, pool).await?;
 
-        let user = interaction.user.id.get() as i64;
+    command
+        .create_followup(
+            &ctx,
+            CreateInteractionResponseFollowup::new()
+                .content("No longer matching")
+                .ephemeral(true),
+        )
+        .await?;
 
-        if database::get_match_by_user(user, pool).await.is_ok() {
-            return Err(anyhow!("You are already in a match!"));
-        }
+    Ok(())
+}
 
-        if database::get_candidate_by_user(user, pool).await.is_err() {
-            return Err(anyhow!("You are not matching!"));
-        }
+pub async fn component(
+    ctx: &Context,
+    interaction: &ComponentInteraction,
+    pool: &SqlitePool,
+) -> Result<()> {
+    interaction
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
+        .await?;
 
-        database::delete_candidate_by_user(user, pool).await?;
+    let user = interaction.user.id.get() as i64;
 
-        interaction
-            .create_followup(
-                &ctx,
-                CreateInteractionResponseFollowup::new()
-                    .content("No longer matching")
-                    .ephemeral(true),
-            )
-            .await?;
-
-        Ok(())
+    if database::get_match_by_user(user, pool).await.is_ok() {
+        return Err(anyhow!("You are already in a match!"));
     }
+
+    if database::get_candidate_by_user(user, pool).await.is_err() {
+        return Err(anyhow!("You are not matching!"));
+    }
+
+    database::delete_candidate_by_user(user, pool).await?;
+
+    interaction
+        .create_followup(
+            &ctx,
+            CreateInteractionResponseFollowup::new()
+                .content("No longer matching")
+                .ephemeral(true),
+        )
+        .await?;
+
+    Ok(())
 }

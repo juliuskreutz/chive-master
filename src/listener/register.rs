@@ -19,161 +19,156 @@ use crate::{database, stardb};
 
 const UID_ID: &str = "uid";
 
-pub struct Register;
+pub fn register(name: &str) -> CreateCommand {
+    CreateCommand::new(name)
+        .description("Register your account")
+        .add_option(
+            CreateCommandOption::new(CommandOptionType::Integer, "uid", "Your uid").required(true),
+        )
+}
 
-impl super::Listener for Register {
-    fn register(name: &str) -> CreateCommand {
-        CreateCommand::new(name)
-            .description("Register your account")
-            .add_option(
-                CreateCommandOption::new(CommandOptionType::Integer, "uid", "Your uid")
-                    .required(true),
-            )
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
+    command
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
+        .await?;
+
+    let uid = command.data.options[0].value.as_i64().unwrap();
+
+    if uid == 420 {
+        return Err(anyhow!("Try 69 next.."));
     }
 
-    async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
-        command
-            .create_response(
-                &ctx,
-                CreateInteractionResponse::Defer(
-                    CreateInteractionResponseMessage::new().ephemeral(true),
-                ),
-            )
-            .await?;
-
-        let uid = command.data.options[0].value.as_i64().unwrap();
-
-        if uid == 420 {
-            return Err(anyhow!("Try 69 next.."));
-        }
-
-        if uid == 69 {
-            return Err(anyhow!(
-                "Try the answer to life next.. (If you don't know it, just google it)"
-            ));
-        }
-
-        if uid == 42 {
-            return Err(anyhow!("Don't forget to stay hydrated! Next answer is 💧"));
-        }
-
-        if let Ok(score_data) = database::get_connection_by_uid(uid, pool).await {
-            return Err(anyhow!(
-                "Already registered to {}",
-                UserId::new(score_data.user as u64).mention()
-            ));
-        }
-
-        if database::get_verification_by_uid(uid, pool).await.is_ok() {
-            return Err(anyhow!(
-                "Awaiting verification. Check verification status with /status."
-            ));
-        };
-
-        if stardb::get(uid).await.is_err() {
-            return Err(anyhow!("This uid does not exist or our api is down"));
-        }
-
-        let user = command.user.id.get() as i64;
-        let name = command.user.name.clone();
-        let otp = otp();
-
-        let verification = database::DbVerification {
-            uid,
-            user,
-            name,
-            otp: otp.clone(),
-            timestamp: Utc::now().naive_utc(),
-        };
-        database::set_verification(&verification, pool).await?;
-
-        command.create_followup(&ctx, response(&otp)).await?;
-
-        Ok(())
+    if uid == 69 {
+        return Err(anyhow!(
+            "Try the answer to life next.. (If you don't know it, just google it)"
+        ));
     }
 
-    async fn modal(ctx: &Context, interaction: &ModalInteraction, pool: &SqlitePool) -> Result<()> {
-        interaction
-            .create_response(
-                &ctx,
-                CreateInteractionResponse::Defer(
-                    CreateInteractionResponseMessage::new().ephemeral(true),
-                ),
-            )
-            .await?;
-
-        let uid: i64 = interaction
-            .data
-            .components
-            .iter()
-            .flat_map(|r| &r.components)
-            .filter_map(|c| match c {
-                ActionRowComponent::InputText(input) => Some(input),
-                _ => None,
-            })
-            .find(|i| i.custom_id == UID_ID)
-            .and_then(|i| i.value.as_ref())
-            .ok_or_else(|| anyhow!("No uid"))?
-            .parse()?;
-
-        if let Ok(score_data) = database::get_connection_by_uid(uid, pool).await {
-            return Err(anyhow!(
-                "Already registered to {}",
-                UserId::new(score_data.user as u64).mention()
-            ));
-        }
-
-        if database::get_verification_by_uid(uid, pool).await.is_ok() {
-            return Err(anyhow!(
-                "Awaiting verification. Check verification status with /status."
-            ));
-        };
-
-        if stardb::get(uid).await.is_err() {
-            return Err(anyhow!("This uid does not exist or our api is down"));
-        }
-
-        let user = interaction.user.id.get() as i64;
-        let name = interaction.user.name.clone();
-        let otp = otp();
-
-        let verification = database::DbVerification {
-            uid,
-            user,
-            name,
-            otp: otp.clone(),
-            timestamp: Utc::now().naive_utc(),
-        };
-        database::set_verification(&verification, pool).await?;
-
-        interaction.create_followup(&ctx, response(&otp)).await?;
-
-        Ok(())
+    if uid == 42 {
+        return Err(anyhow!("Don't forget to stay hydrated! Next answer is 💧"));
     }
 
-    async fn component(
-        ctx: &Context,
-        interaction: &ComponentInteraction,
-        _: &SqlitePool,
-    ) -> Result<()> {
-        interaction
-            .create_response(
-                &ctx,
-                CreateInteractionResponse::Modal(
-                    CreateModal::new(
-                        super::ListenerName::Register.to_string(),
-                        "Please put in your uid",
-                    )
-                    .components(vec![CreateActionRow::InputText(
-                        CreateInputText::new(InputTextStyle::Short, "uid", UID_ID)
-                            .placeholder("123456789"),
-                    )]),
-                ),
-            )
-            .await?;
-
-        Ok(())
+    if let Ok(score_data) = database::get_connection_by_uid(uid, pool).await {
+        return Err(anyhow!(
+            "Already registered to {}",
+            UserId::new(score_data.user as u64).mention()
+        ));
     }
+
+    if database::get_verification_by_uid(uid, pool).await.is_ok() {
+        return Err(anyhow!(
+            "Awaiting verification. Check verification status with /status."
+        ));
+    };
+
+    if stardb::get(uid).await.is_err() {
+        return Err(anyhow!("This uid does not exist or our api is down"));
+    }
+
+    let user = command.user.id.get() as i64;
+    let name = command.user.name.clone();
+    let otp = otp();
+
+    let verification = database::DbVerification {
+        uid,
+        user,
+        name,
+        otp: otp.clone(),
+        timestamp: Utc::now().naive_utc(),
+    };
+    database::set_verification(&verification, pool).await?;
+
+    command.create_followup(&ctx, response(&otp)).await?;
+
+    Ok(())
+}
+
+pub async fn modal(ctx: &Context, interaction: &ModalInteraction, pool: &SqlitePool) -> Result<()> {
+    interaction
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(true),
+            ),
+        )
+        .await?;
+
+    let uid: i64 = interaction
+        .data
+        .components
+        .iter()
+        .flat_map(|r| &r.components)
+        .filter_map(|c| match c {
+            ActionRowComponent::InputText(input) => Some(input),
+            _ => None,
+        })
+        .find(|i| i.custom_id == UID_ID)
+        .and_then(|i| i.value.as_ref())
+        .ok_or_else(|| anyhow!("No uid"))?
+        .parse()?;
+
+    if let Ok(score_data) = database::get_connection_by_uid(uid, pool).await {
+        return Err(anyhow!(
+            "Already registered to {}",
+            UserId::new(score_data.user as u64).mention()
+        ));
+    }
+
+    if database::get_verification_by_uid(uid, pool).await.is_ok() {
+        return Err(anyhow!(
+            "Awaiting verification. Check verification status with /status."
+        ));
+    };
+
+    if stardb::get(uid).await.is_err() {
+        return Err(anyhow!("This uid does not exist or our api is down"));
+    }
+
+    let user = interaction.user.id.get() as i64;
+    let name = interaction.user.name.clone();
+    let otp = otp();
+
+    let verification = database::DbVerification {
+        uid,
+        user,
+        name,
+        otp: otp.clone(),
+        timestamp: Utc::now().naive_utc(),
+    };
+    database::set_verification(&verification, pool).await?;
+
+    interaction.create_followup(&ctx, response(&otp)).await?;
+
+    Ok(())
+}
+
+pub async fn component(
+    ctx: &Context,
+    interaction: &ComponentInteraction,
+    _: &SqlitePool,
+) -> Result<()> {
+    interaction
+        .create_response(
+            &ctx,
+            CreateInteractionResponse::Modal(
+                CreateModal::new(
+                    super::ListenerName::Register.to_string(),
+                    "Please put in your uid",
+                )
+                .components(vec![CreateActionRow::InputText(
+                    CreateInputText::new(InputTextStyle::Short, "uid", UID_ID)
+                        .placeholder("123456789"),
+                )]),
+            ),
+        )
+        .await?;
+
+    Ok(())
 }
 
 fn response(otp: &str) -> CreateInteractionResponseFollowup {

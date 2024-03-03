@@ -11,31 +11,27 @@ use serenity::{
 };
 use sqlx::SqlitePool;
 
-pub struct Message;
+pub fn register(name: &str) -> CreateCommand {
+    CreateCommand::new(name)
+        .description("Message")
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "verify",
+            "Verify message",
+        ))
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "match",
+            "Match message",
+        ))
+        .default_member_permissions(Permissions::ADMINISTRATOR)
+}
 
-impl super::Listener for Message {
-    fn register(name: &str) -> CreateCommand {
-        CreateCommand::new(name)
-            .description("Message")
-            .add_option(CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "verify",
-                "Verify message",
-            ))
-            .add_option(CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "match",
-                "Match message",
-            ))
-            .default_member_permissions(Permissions::ADMINISTRATOR)
-    }
-
-    async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
-        match command.data.options[0].name.as_str() {
-            "verify" => verify(ctx, command, pool).await,
-            "match" => r#match(ctx, command, pool).await,
-            _ => Err(anyhow!("Not a subcommand")),
-        }
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
+    match command.data.options[0].name.as_str() {
+        "verify" => verify(ctx, command, pool).await,
+        "match" => r#match(ctx, command, pool).await,
+        _ => Err(anyhow!("Not a subcommand")),
     }
 }
 

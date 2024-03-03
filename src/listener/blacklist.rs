@@ -12,64 +12,60 @@ use sqlx::SqlitePool;
 
 use crate::database;
 
-pub struct Blacklist;
-
-impl super::Listener for Blacklist {
-    fn register(name: &str) -> CreateCommand {
-        CreateCommand::new(name)
-            .description("Role management")
-            .add_option(
-                CreateCommandOption::new(
-                    CommandOptionType::SubCommand,
-                    "add",
-                    "Add an emoji to the blacklist",
-                )
-                .add_sub_option(
-                    CreateCommandOption::new(CommandOptionType::String, "emoji", "Emoji")
-                        .required(true),
-                ),
-            )
-            .add_option(
-                CreateCommandOption::new(
-                    CommandOptionType::SubCommand,
-                    "remove",
-                    "Remove an emoji from the blacklist",
-                )
-                .add_sub_option(
-                    CreateCommandOption::new(CommandOptionType::String, "emoji", "Emoji")
-                        .required(true),
-                ),
-            )
-            .add_option(CreateCommandOption::new(
+pub fn register(name: &str) -> CreateCommand {
+    CreateCommand::new(name)
+        .description("Role management")
+        .add_option(
+            CreateCommandOption::new(
                 CommandOptionType::SubCommand,
-                "list",
-                "List blacklist",
-            ))
-            .default_member_permissions(Permissions::ADMINISTRATOR)
-    }
+                "add",
+                "Add an emoji to the blacklist",
+            )
+            .add_sub_option(
+                CreateCommandOption::new(CommandOptionType::String, "emoji", "Emoji")
+                    .required(true),
+            ),
+        )
+        .add_option(
+            CreateCommandOption::new(
+                CommandOptionType::SubCommand,
+                "remove",
+                "Remove an emoji from the blacklist",
+            )
+            .add_sub_option(
+                CreateCommandOption::new(CommandOptionType::String, "emoji", "Emoji")
+                    .required(true),
+            ),
+        )
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "list",
+            "List blacklist",
+        ))
+        .default_member_permissions(Permissions::ADMINISTRATOR)
+}
 
-    async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
-        match command.data.options[0].name.as_str() {
-            "add" => add(ctx, command, pool).await,
-            "remove" => remove(ctx, command, pool).await,
-            "list" => list(ctx, command, pool).await,
-            _ => Err(anyhow!("Not a subcommand")),
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
+    match command.data.options[0].name.as_str() {
+        "add" => add(ctx, command, pool).await,
+        "remove" => remove(ctx, command, pool).await,
+        "list" => list(ctx, command, pool).await,
+        _ => Err(anyhow!("Not a subcommand")),
+    }
+}
+
+pub async fn reaction_add(ctx: &Context, reaction: &Reaction, pool: &SqlitePool) -> Result<()> {
+    if let ReactionType::Unicode(emoji) = &reaction.emoji {
+        if database::get_blacklist(pool)
+            .await?
+            .iter()
+            .any(|b| &b.emoji == emoji)
+        {
+            reaction.delete(&ctx).await?;
         }
     }
 
-    async fn reaction_add(ctx: &Context, reaction: &Reaction, pool: &SqlitePool) -> Result<()> {
-        if let ReactionType::Unicode(emoji) = &reaction.emoji {
-            if database::get_blacklist(pool)
-                .await?
-                .iter()
-                .any(|b| &b.emoji == emoji)
-            {
-                reaction.delete(&ctx).await?;
-            }
-        }
-
-        Ok(())
-    }
+    Ok(())
 }
 
 async fn add(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

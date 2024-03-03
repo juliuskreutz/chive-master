@@ -12,31 +12,27 @@ use sqlx::SqlitePool;
 
 use crate::database;
 
-pub struct Channel;
+pub fn register(name: &str) -> CreateCommand {
+    CreateCommand::new(name)
+        .description("Channel management")
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "enable",
+            "Enable current channel as update channel",
+        ))
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "disable",
+            "Disable current channel as update channel",
+        ))
+        .default_member_permissions(Permissions::ADMINISTRATOR)
+}
 
-impl super::Listener for Channel {
-    fn register(name: &str) -> CreateCommand {
-        CreateCommand::new(name)
-            .description("Channel management")
-            .add_option(CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "enable",
-                "Enable current channel as update channel",
-            ))
-            .add_option(CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "disable",
-                "Disable current channel as update channel",
-            ))
-            .default_member_permissions(Permissions::ADMINISTRATOR)
-    }
-
-    async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
-        match command.data.options[0].name.as_str() {
-            "enable" => enable(ctx, command, pool).await,
-            "disable" => disable(ctx, command, pool).await,
-            _ => Err(anyhow!("Not a subcommand")),
-        }
+pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
+    match command.data.options[0].name.as_str() {
+        "enable" => enable(ctx, command, pool).await,
+        "disable" => disable(ctx, command, pool).await,
+        _ => Err(anyhow!("Not a subcommand")),
     }
 }
 

@@ -14,50 +14,41 @@ use serenity::{
 };
 use sqlx::SqlitePool;
 
-pub struct Purge;
-
-impl super::Listener for Purge {
-    fn register(name: &str) -> CreateCommand {
-        CreateCommand::new(name)
-            .description("Purge")
-            .add_option(
-                CreateCommandOption::new(
-                    CommandOptionType::SubCommand,
-                    "all",
-                    "Purge all messages",
-                )
+pub fn register(name: &str) -> CreateCommand {
+    CreateCommand::new(name)
+        .description("Purge")
+        .add_option(
+            CreateCommandOption::new(CommandOptionType::SubCommand, "all", "Purge all messages")
                 .add_sub_option(
                     CreateCommandOption::new(CommandOptionType::Integer, "amount", "Amount")
                         .required(true)
                         .min_int_value(1)
                         .max_int_value(100),
                 ),
+        )
+        .add_option(
+            CreateCommandOption::new(
+                CommandOptionType::SubCommand,
+                "user",
+                "Purge messages from a user",
             )
-            .add_option(
-                CreateCommandOption::new(
-                    CommandOptionType::SubCommand,
-                    "user",
-                    "Purge messages from a user",
-                )
-                .add_sub_option(
-                    CreateCommandOption::new(CommandOptionType::User, "user", "User")
-                        .required(true),
-                )
-                .add_sub_option(
-                    CreateCommandOption::new(CommandOptionType::Integer, "amount", "Amount")
-                        .min_int_value(1)
-                        .max_int_value(100),
-                ),
+            .add_sub_option(
+                CreateCommandOption::new(CommandOptionType::User, "user", "User").required(true),
             )
-            .default_member_permissions(Permissions::MANAGE_MESSAGES)
-    }
+            .add_sub_option(
+                CreateCommandOption::new(CommandOptionType::Integer, "amount", "Amount")
+                    .min_int_value(1)
+                    .max_int_value(100),
+            ),
+        )
+        .default_member_permissions(Permissions::MANAGE_MESSAGES)
+}
 
-    async fn command(ctx: &Context, command: &CommandInteraction, _: &SqlitePool) -> Result<()> {
-        match command.data.options[0].name.as_str() {
-            "all" => all(ctx, command).await,
-            "user" => user(ctx, command).await,
-            _ => Err(anyhow!("Not a subcommand")),
-        }
+pub async fn command(ctx: &Context, command: &CommandInteraction, _: &SqlitePool) -> Result<()> {
+    match command.data.options[0].name.as_str() {
+        "all" => all(ctx, command).await,
+        "user" => user(ctx, command).await,
+        _ => Err(anyhow!("Not a subcommand")),
     }
 }
 
