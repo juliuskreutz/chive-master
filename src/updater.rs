@@ -313,13 +313,16 @@ async fn add_member_role(
             .add_role(http, RoleId::new(role as u64))
             .await
             .is_err()
-            && GUILD_ID
+        {
+            if GUILD_ID
                 .roles(http)
                 .await?
                 .get(&RoleId::new(role as u64))
-                .is_none()
-        {
-            break;
+                .is_none() {
+                break;
+            }
+        } else {
+            return Ok(());
         }
 
         tokio::time::sleep(std::time::Duration::from_secs(5)).await;
