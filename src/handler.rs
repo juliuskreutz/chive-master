@@ -8,6 +8,7 @@ use serenity::{
     },
     builder::CreateInteractionResponseFollowup,
     client::{Context, EventHandler},
+    futures::StreamExt,
     gateway::ActivityData,
 };
 use sqlx::SqlitePool;
@@ -89,9 +90,13 @@ impl EventHandler for Handler {
 
         ctx.set_activity(Some(ActivityData::watching("Chive Hunters")));
 
-        let members = GUILD_ID.members(&ctx, None, None).await.unwrap();
+        let mut members = GUILD_ID.members_iter(&ctx).boxed();
+        while let Some(member) = members.next().await {
+            let member = match member {
+                Ok(member) => member,
+                Err(_) => continue,
+            };
 
-        for member in members {
             if member.user.bot {
                 continue;
             }

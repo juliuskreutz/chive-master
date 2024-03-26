@@ -314,18 +314,19 @@ async fn add_member_role(
             .await
             .is_err()
         {
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
             if GUILD_ID
                 .roles(http)
                 .await?
                 .get(&RoleId::new(role as u64))
-                .is_none() {
+                .is_none()
+            {
                 break;
             }
         } else {
             return Ok(());
         }
-
-        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     }
 
     d.insert(role);
