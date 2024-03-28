@@ -90,23 +90,53 @@ impl EventHandler for Handler {
 
         ctx.set_activity(Some(ActivityData::watching("Chive Hunters")));
 
-        let mut members = GUILD_ID.members_iter(&ctx).boxed();
-        while let Some(member) = members.next().await {
-            let member = match member {
-                Ok(member) => member,
-                Err(_) => continue,
-            };
+        tokio::spawn(async move {
+            let members = GUILD_ID.members_iter(&ctx).collect::<Vec<_>>().await;
 
-            if member.user.bot {
-                continue;
-            }
+            crate::updater::log(&format!("Total users {}", members.len()), &ctx.http).await;
 
-            loop {
-                if member.add_role(&ctx, 1210489410467143741).await.is_ok() {
-                    break;
+            for (i, members) in members.chunks(10).enumerate() {
+                let mut handles = vec![];
+
+                for member in members {
+                    let member = match member {
+                        Err(e) => {
+                            crate::updater::log(&format!("{i} {e}"), &ctx.http).await;
+                            continue;
+                        }
+                        Ok(m) => m,
+                    }
+                    .clone();
+
+                    if member.user.bot {
+                        continue;
+                    }
+
+                    let ctx = ctx.clone();
+                    handles.push(tokio::spawn(async move {
+                        loop {
+                            if let Err(e) = member.add_role(&ctx, 1210489410467143741).await {
+                                crate::updater::log(&format!("{e}"), &ctx.http).await;
+                            }
+
+                            if member.add_role(&ctx, 1210489410467143741).await.is_ok() {
+                                break;
+                            }
+
+                            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                        }
+                    }));
                 }
+
+                for handle in handles {
+                    handle.await.unwrap();
+                }
+
+                crate::updater::log(&format!("Updated chunk {i}"), &ctx.http).await;
             }
-        }
+
+            crate::updater::log("<@246684413075652612> Done", &ctx.http).await;
+        });
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {

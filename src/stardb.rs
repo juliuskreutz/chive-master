@@ -11,19 +11,15 @@ pub struct ScoreAchievement {
 
 pub async fn get(uid: i64) -> Result<ScoreAchievement> {
     Ok(
-        if let Ok(score) = reqwest::get(&format!(
-            "http://localhost:8000/api/scores/achievements/{uid}"
-        ))
-        .await?
-        .json::<ScoreAchievement>()
-        .await
+        if let Ok(score) = reqwest::get(&format!("https://stardb.gg/api/scores/achievements/{uid}"))
+            .await?
+            .json::<ScoreAchievement>()
+            .await
         {
             score
         } else {
             reqwest::Client::new()
-                .put(&format!(
-                    "http://localhost:8000/api/scores/achievements/{uid}"
-                ))
+                .put(&format!("https://stardb.gg/api/scores/achievements/{uid}"))
                 .send()
                 .await?
                 .json::<ScoreAchievement>()
@@ -35,9 +31,7 @@ pub async fn get(uid: i64) -> Result<ScoreAchievement> {
 
 pub async fn put(uid: i64) -> Result<ScoreAchievement> {
     reqwest::Client::new()
-        .put(&format!(
-            "http://localhost:8000/api/scores/achievements/{uid}"
-        ))
+        .put(&format!("https://stardb.gg/api/scores/achievements/{uid}"))
         .send()
         .await?
         .json::<ScoreAchievement>()

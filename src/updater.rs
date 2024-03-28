@@ -25,6 +25,7 @@ use crate::{
 pub fn init(http: Arc<Http>, pool: SqlitePool) {
     {
         let http = http.clone();
+
         let pool = pool.clone();
         tokio::spawn(async move {
             loop {
