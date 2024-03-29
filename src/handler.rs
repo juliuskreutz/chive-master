@@ -95,9 +95,7 @@ impl EventHandler for Handler {
                 .members_iter(&ctx)
                 .filter_map(|m| async move {
                     m.ok().and_then(|m| {
-                        m.roles
-                            .contains(&RoleId::new(1210489410467143741))
-                            .then_some(m)
+                        (!m.roles.contains(&RoleId::new(1210489410467143741))).then_some(m)
                     })
                 })
                 .collect::<Vec<_>>()
