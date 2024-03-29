@@ -96,12 +96,9 @@ pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqliteP
     }
 
     let mut images = Vec::new();
-    let mut uids = Vec::new();
 
     for score in scores {
         let uid = score.uid;
-
-        uids.push(uid);
 
         let bytes = reqwest::get(&format!("{url}&uid={uid}"))
             .await?
@@ -127,16 +124,6 @@ pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqliteP
                 .await?;
         }
     }
-
-    command
-        .create_followup(
-            &ctx,
-            CreateInteractionResponseFollowup::new().content(format!(
-                "Also checkout our WIP v2 profile https://v2.stardb.gg/profile/{}",
-                uids[0]
-            )),
-        )
-        .await?;
 
     Ok(())
 }
