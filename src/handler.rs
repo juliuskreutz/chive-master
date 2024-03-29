@@ -4,7 +4,7 @@ use anyhow::Result;
 use serenity::{
     all::{
         Command, CommandInteraction, ComponentInteraction, GuildId, Interaction, Member,
-        ModalInteraction, Reaction, Ready, User,
+        ModalInteraction, Reaction, Ready, RoleId, User,
     },
     builder::CreateInteractionResponseFollowup,
     client::{Context, EventHandler},
@@ -91,7 +91,17 @@ impl EventHandler for Handler {
         ctx.set_activity(Some(ActivityData::watching("Chive Hunters")));
 
         tokio::spawn(async move {
-            let members = GUILD_ID.members_iter(&ctx).collect::<Vec<_>>().await;
+            let members = GUILD_ID
+                .members_iter(&ctx)
+                .filter_map(|m| async move {
+                    m.ok().and_then(|m| {
+                        m.roles
+                            .contains(&RoleId::new(1210489410467143741))
+                            .then_some(m)
+                    })
+                })
+                .collect::<Vec<_>>()
+                .await;
 
             crate::updater::log(&format!("Total users {}", members.len()), &ctx.http).await;
 
@@ -99,14 +109,7 @@ impl EventHandler for Handler {
                 let mut handles = vec![];
 
                 for member in members {
-                    let member = match member {
-                        Err(e) => {
-                            crate::updater::log(&format!("{i} {e}"), &ctx.http).await;
-                            continue;
-                        }
-                        Ok(m) => m,
-                    }
-                    .clone();
+                    let member = member.clone();
 
                     if member.user.bot {
                         continue;
