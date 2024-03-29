@@ -118,9 +118,7 @@ impl EventHandler for Handler {
                         loop {
                             if let Err(e) = member.add_role(&ctx, 1210489410467143741).await {
                                 crate::updater::log(&format!("{e}"), &ctx.http).await;
-                            }
-
-                            if member.add_role(&ctx, 1210489410467143741).await.is_ok() {
+                            } else {
                                 break;
                             }
 
