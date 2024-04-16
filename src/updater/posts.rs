@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use serenity::all::{ChannelId, CreateEmbed, CreateEmbedAuthor, CreateMessage, Http};
+use serenity::all::{
+    ChannelId, CreateEmbed, CreateEmbedAuthor, CreateMessage, Http, Mentionable, RoleId,
+};
 use sqlx::SqlitePool;
 
 use crate::database;
@@ -86,6 +88,13 @@ pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
             .field("End", format!("<t:{}:R>", event.end), true);
 
         channel
+            .send_message(
+                http,
+                CreateMessage::new()
+                    .content(format!("{}", RoleId::new(1229730323672338462).mention())),
+            )
+            .await?;
+        channel
             .send_message(http, CreateMessage::new().embed(embed))
             .await?;
     }
@@ -141,6 +150,13 @@ pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
             embed = embed.thumbnail(&image.url);
         }
 
+        channel
+            .send_message(
+                http,
+                CreateMessage::new()
+                    .content(format!("{}", RoleId::new(1229730323672338462).mention())),
+            )
+            .await?;
         channel
             .send_message(http, CreateMessage::new().embed(embed))
             .await?;
