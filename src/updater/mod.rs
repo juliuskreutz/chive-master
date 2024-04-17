@@ -182,7 +182,9 @@ async fn add_member_role(
         return Ok(());
     }
 
-    loop {
+    let mut i = 0;
+
+    while i < 5 {
         if member
             .add_role(http, RoleId::new(role as u64))
             .await
@@ -196,7 +198,7 @@ async fn add_member_role(
                 .get(&RoleId::new(role as u64))
                 .is_none()
             {
-                break;
+                i += 1;
             }
         } else {
             return Ok(());
