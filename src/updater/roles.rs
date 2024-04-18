@@ -12,6 +12,8 @@ pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
     let users = database::get_users(pool).await?;
     for user in users {
         super::update_user_roles(user, &mut d, http, pool).await?;
+
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     }
 
     Ok(())
