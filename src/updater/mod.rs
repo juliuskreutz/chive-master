@@ -147,6 +147,7 @@ pub async fn update_user_roles(
     for role in &permanent_roles {
         if score.achievement_count >= role.chives {
             add_member_role(&mut member, role.role, d, http, pool).await?;
+            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
         }
     }
 
@@ -159,6 +160,7 @@ pub async fn update_user_roles(
     };
 
     add_member_role(&mut member, role_add.role, d, http, pool).await?;
+    tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
     for role in database::get_exclusive_roles(pool).await? {
         if role.role == role_add.role {
@@ -166,6 +168,7 @@ pub async fn update_user_roles(
         }
 
         remove_member_role(&mut member, role.role, d, http, pool).await?;
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
     }
 
     Ok(())
@@ -190,8 +193,6 @@ async fn add_member_role(
             .await
             .is_err()
         {
-            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-
             if GUILD_ID
                 .roles(http)
                 .await?
@@ -200,6 +201,8 @@ async fn add_member_role(
             {
                 i += 1;
             }
+
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
         } else {
             return Ok(());
         }
