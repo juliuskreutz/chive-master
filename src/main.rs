@@ -32,15 +32,12 @@ async fn main() -> Result<()> {
         .map(|l| (l.to_string(), l))
         .collect::<HashMap<_, _>>();
 
-    let mut client = Client::builder(
-        &discord_token,
-        GatewayIntents::non_privileged() | GatewayIntents::GUILD_MEMBERS,
-    )
-    .event_handler(Handler {
-        listeners,
-        pool: pool.clone(),
-    })
-    .await?;
+    let mut client = Client::builder(&discord_token, GatewayIntents::all())
+        .event_handler(Handler {
+            listeners,
+            pool: pool.clone(),
+        })
+        .await?;
 
     updater::init(client.http.clone(), pool);
 
