@@ -26,6 +26,7 @@ pub fn register(name: &str) -> CreateCommand {
                 .add_int_choice("7", 7))
             .add_option(CreateCommandOption::new(CommandOptionType::String, "primarycolor", "Primary Color in hexcode notation").required(false))
             .add_option(CreateCommandOption::new(CommandOptionType::String, "secondarycolor", "Secondary Color in hexcode notation").required(false))
+            .dm_permission(false)
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

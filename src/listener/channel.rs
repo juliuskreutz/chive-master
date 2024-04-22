@@ -26,6 +26,7 @@ pub fn register(name: &str) -> CreateCommand {
             "Disable current channel as update channel",
         ))
         .default_member_permissions(Permissions::ADMINISTRATOR)
+        .dm_permission(false)
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

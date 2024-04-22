@@ -44,6 +44,7 @@ pub fn register(name: &str) -> CreateCommand {
             ),
         )
         .default_member_permissions(Permissions::MANAGE_ROLES)
+        .dm_permission(false)
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

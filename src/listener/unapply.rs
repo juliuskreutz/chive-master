@@ -12,7 +12,9 @@ use sqlx::SqlitePool;
 use crate::database;
 
 pub fn register(name: &str) -> CreateCommand {
-    CreateCommand::new(name).description("Stop matching :(")
+    CreateCommand::new(name)
+        .description("Stop matching :(")
+        .dm_permission(false)
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

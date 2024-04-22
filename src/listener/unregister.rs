@@ -17,6 +17,7 @@ pub fn register(name: &str) -> CreateCommand {
         .add_option(
             CreateCommandOption::new(CommandOptionType::Integer, "uid", "Your uid").required(true),
         )
+        .dm_permission(false)
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

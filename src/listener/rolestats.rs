@@ -14,7 +14,9 @@ use url::Url;
 use crate::{database, GUILD_ID};
 
 pub fn register(name: &str) -> CreateCommand {
-    CreateCommand::new(name).description("Shows the role distribution of this server")
+    CreateCommand::new(name)
+        .description("Shows the role distribution of this server")
+        .dm_permission(false)
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

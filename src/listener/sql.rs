@@ -20,6 +20,7 @@ pub fn register(name: &str) -> CreateCommand {
             CreateCommandOption::new(CommandOptionType::String, "query", "Query").required(true),
         )
         .default_member_permissions(Permissions::ADMINISTRATOR)
+        .dm_permission(false)
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

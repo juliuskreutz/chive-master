@@ -25,6 +25,7 @@ pub fn register(name: &str) -> CreateCommand {
             "Match message",
         ))
         .default_member_permissions(Permissions::ADMINISTRATOR)
+        .dm_permission(false)
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

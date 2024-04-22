@@ -21,6 +21,7 @@ pub fn register(name: &str) -> CreateCommand {
         )
         .description("Warn a user")
         .default_member_permissions(Permissions::MANAGE_NICKNAMES)
+        .dm_permission(false)
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, _: &SqlitePool) -> Result<()> {

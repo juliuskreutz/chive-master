@@ -18,6 +18,7 @@ pub fn register(name: &str) -> CreateCommand {
     CreateCommand::new(name)
         .description("Disband this match")
         .default_member_permissions(Permissions::ADMINISTRATOR)
+        .dm_permission(false)
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

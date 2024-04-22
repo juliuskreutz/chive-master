@@ -19,6 +19,7 @@ pub fn register(name: &str) -> CreateCommand {
             CreateCommandOption::new(CommandOptionType::User, "user", "User").required(true),
         )
         .default_member_permissions(Permissions::MANAGE_NICKNAMES)
+        .dm_permission(false)
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

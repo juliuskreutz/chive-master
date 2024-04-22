@@ -14,7 +14,9 @@ use sqlx::SqlitePool;
 use crate::{database, stardb, updater};
 
 pub fn register(name: &str) -> CreateCommand {
-    CreateCommand::new(name).description("Update connected uids")
+    CreateCommand::new(name)
+        .description("Update connected uids")
+        .dm_permission(false)
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
