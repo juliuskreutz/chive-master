@@ -21,7 +21,7 @@ pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
     let mut message2 = Vec::new();
 
     for (i, data) in scores.iter().take(100).enumerate() {
-        let place = data.global_rank;
+        let place = i + 1;
         let achievement_count = data.achievement_count;
         let name = data.name.clone();
 
