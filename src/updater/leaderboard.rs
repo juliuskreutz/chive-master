@@ -38,17 +38,11 @@ pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
 
     let channels = database::get_channels(pool).await?;
     for channel in channels {
-        if let Ok(messages) = ChannelId::new(channel.channel as u64)
+        for message in ChannelId::new(channel.channel as u64)
             .messages(http, GetMessages::new().limit(2))
-            .await
+            .await?
         {
-            if let Some(message) = messages.first() {
-                let _ = message.delete(http).await;
-            }
-
-            if let Some(message) = messages.get(1) {
-                let _ = message.delete(http).await;
-            }
+            let _ = message.delete(http).await;
         }
 
         if let Err(serenity::Error::Http(_)) = ChannelId::new(channel.channel as u64)
