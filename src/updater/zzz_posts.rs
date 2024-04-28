@@ -133,7 +133,7 @@ pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
         }
         database::set_post(database::DbPost { id }, pool).await?;
 
-        let url = format!("https://www.hoyolab.com/article/{}", article.post.post_id);
+        let url = format!("https://www.hoyolab.com/article/{id}");
 
         let mut embed = CreateEmbed::new()
             .author(CreateEmbedAuthor::new(title))

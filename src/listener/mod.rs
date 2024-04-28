@@ -2,7 +2,6 @@ mod apply;
 mod bans;
 mod blacklist;
 mod card;
-mod channel;
 mod disband;
 mod message;
 mod purge;
@@ -34,7 +33,6 @@ pub enum ListenerName {
     Bans,
     Blacklist,
     Card,
-    Channel,
     Disband,
     Message,
     Register,
@@ -60,7 +58,6 @@ impl ListenerName {
             ListenerName::Bans => bans::register(&self.to_string()),
             ListenerName::Blacklist => blacklist::register(&self.to_string()),
             ListenerName::Card => card::register(&self.to_string()),
-            ListenerName::Channel => channel::register(&self.to_string()),
             ListenerName::Disband => disband::register(&self.to_string()),
             ListenerName::Message => message::register(&self.to_string()),
             ListenerName::Register => register::register(&self.to_string()),
@@ -91,7 +88,6 @@ impl ListenerName {
             ListenerName::Bans => bans::command(ctx, command, pool).await,
             ListenerName::Blacklist => blacklist::command(ctx, command, pool).await,
             ListenerName::Card => card::command(ctx, command, pool).await,
-            ListenerName::Channel => channel::command(ctx, command, pool).await,
             ListenerName::Disband => disband::command(ctx, command, pool).await,
             ListenerName::Message => message::command(ctx, command, pool).await,
             ListenerName::Register => register::command(ctx, command, pool).await,

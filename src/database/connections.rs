@@ -24,14 +24,6 @@ pub async fn get_connection_by_uid(uid: i64, pool: &SqlitePool) -> Result<DbConn
     .await?)
 }
 
-pub async fn get_uids(pool: &SqlitePool) -> Result<Vec<i64>> {
-    Ok(sqlx::query!("SELECT uid FROM connections")
-        .fetch_all(pool)
-        .await
-        .map(|r| r.into_iter().map(|r| r.uid))?
-        .collect())
-}
-
 pub async fn set_connection(data: &DbConnection, pool: &SqlitePool) -> Result<()> {
     sqlx::query!(
         "INSERT OR REPLACE INTO connections(uid, user) VALUES(?, ?)",

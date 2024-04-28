@@ -1,5 +1,4 @@
 mod hsr_posts;
-mod leaderboard;
 mod matches;
 mod roles;
 mod verifications;
@@ -79,20 +78,6 @@ pub fn init(http: Arc<Http>, pool: SqlitePool) {
                                 "Updated verifications in {} seconds",
                                 now.elapsed().as_secs()
                             ),
-                            &http,
-                        )
-                        .await;
-
-                        let now = Instant::now();
-                        if let Err(e) = leaderboard::update(&http, &pool).await {
-                            log(
-                                &format!("Error: Leaderboard {} <@246684413075652612>", e),
-                                &http,
-                            )
-                            .await;
-                        }
-                        log(
-                            &format!("Updated leaderboard in {} seconds", now.elapsed().as_secs()),
                             &http,
                         )
                         .await;
