@@ -119,7 +119,7 @@ pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
 
     articles.sort_unstable_by_key(|(a, _)| a.post.created_at);
 
-    let channel = ChannelId::new(1229466203538587689);
+    let channel = ChannelId::new(1234222295615012945);
     for (article, article_type) in articles {
         let (title, color) = match article_type {
             ArticleType::Notice => ("Notice", 0xffd166),
