@@ -58,9 +58,11 @@ struct Image {
 pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
     let client = reqwest::Client::new();
 
-    let json_events: Json<Event> = client.get("https://bbs-api-os.hoyolab.com/community/community_contribution/wapi/event/list?gids=6&page_size=15&size=15").header("x-rpc-client_type", "4").send().await.unwrap().json().await.unwrap();
+    let json_events: Json<Event> = client.get("https://bbs-api-os.hoyolab.com/community/community_contribution/wapi/event/list?gids=8&page_size=15&size=15").header("x-rpc-client_type", "4").send().await.unwrap().json().await.unwrap();
 
-    let channel = ChannelId::new(1229514777781473492);
+    let role = RoleId::new(1234222794921869494);
+
+    let channel = ChannelId::new(1234222314812473449);
     for event in json_events.data.list.iter().rev() {
         let id = event.id.parse().unwrap();
 
@@ -90,8 +92,7 @@ pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
         channel
             .send_message(
                 http,
-                CreateMessage::new()
-                    .content(format!("{}", RoleId::new(1229730323672338462).mention())),
+                CreateMessage::new().content(format!("{}", role.mention())),
             )
             .await?;
         channel
@@ -99,8 +100,8 @@ pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
             .await?;
     }
 
-    let json_notices: Json<Article> = client.get("https://bbs-api-os.hoyolab.com/community/post/wapi/getNewsList?gids=6&page_size=15&type=1").send().await.unwrap().json().await.unwrap();
-    let json_infos: Json<Article> = client.get("https://bbs-api-os.hoyolab.com/community/post/wapi/getNewsList?gids=6&page_size=15&type=3").send().await.unwrap().json().await.unwrap();
+    let json_notices: Json<Article> = client.get("https://bbs-api-os.hoyolab.com/community/post/wapi/getNewsList?gids=8&page_size=15&type=1").send().await.unwrap().json().await.unwrap();
+    let json_infos: Json<Article> = client.get("https://bbs-api-os.hoyolab.com/community/post/wapi/getNewsList?gids=8&page_size=15&type=3").send().await.unwrap().json().await.unwrap();
 
     let mut articles = json_notices
         .data
@@ -153,8 +154,7 @@ pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
         channel
             .send_message(
                 http,
-                CreateMessage::new()
-                    .content(format!("{}", RoleId::new(1229730323672338462).mention())),
+                CreateMessage::new().content(format!("{}", role.mention())),
             )
             .await?;
         channel

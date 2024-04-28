@@ -1,8 +1,9 @@
+mod hsr_posts;
 mod leaderboard;
 mod matches;
-mod posts;
 mod roles;
 mod verifications;
+mod zzz_posts;
 
 use std::{
     collections::HashSet,
@@ -38,11 +39,29 @@ pub fn init(http: Arc<Http>, pool: SqlitePool) {
                         timer.tick().await;
 
                         let now = Instant::now();
-                        if let Err(e) = posts::update(&http, &pool).await {
-                            log(&format!("Error: Posts {} <@246684413075652612>", e), &http).await;
+                        if let Err(e) = hsr_posts::update(&http, &pool).await {
+                            log(
+                                &format!("Error: Hsr posts {} <@246684413075652612>", e),
+                                &http,
+                            )
+                            .await;
                         }
                         log(
-                            &format!("Updated posts in {} seconds", now.elapsed().as_secs()),
+                            &format!("Updated hsr posts in {} seconds", now.elapsed().as_secs()),
+                            &http,
+                        )
+                        .await;
+
+                        let now = Instant::now();
+                        if let Err(e) = zzz_posts::update(&http, &pool).await {
+                            log(
+                                &format!("Error: Zzz posts {} <@246684413075652612>", e),
+                                &http,
+                            )
+                            .await;
+                        }
+                        log(
+                            &format!("Updated zzz posts in {} seconds", now.elapsed().as_secs()),
                             &http,
                         )
                         .await;
