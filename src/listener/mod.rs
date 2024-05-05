@@ -21,7 +21,10 @@ mod warn;
 
 use anyhow::Result;
 use serenity::{
-    all::{CommandInteraction, ComponentInteraction, GuildId, ModalInteraction, Reaction, User},
+    all::{
+        CommandInteraction, ComponentInteraction, CreateCommand, GuildId, ModalInteraction,
+        Reaction, User,
+    },
     client::Context,
 };
 use sqlx::SqlitePool;
@@ -52,28 +55,28 @@ pub enum ListenerName {
 }
 
 impl ListenerName {
-    pub fn register(&self) -> serenity::builder::CreateCommand {
+    pub fn register(&self, commands: &mut Vec<CreateCommand>) {
         match self {
-            ListenerName::Apply => apply::register(&self.to_string()),
-            ListenerName::Bans => bans::register(&self.to_string()),
-            ListenerName::Blacklist => blacklist::register(&self.to_string()),
-            ListenerName::Card => card::register(&self.to_string()),
-            ListenerName::Disband => disband::register(&self.to_string()),
-            ListenerName::Message => message::register(&self.to_string()),
-            ListenerName::Register => register::register(&self.to_string()),
-            ListenerName::Role => role::register(&self.to_string()),
-            ListenerName::Roles => roles::register(&self.to_string()),
-            ListenerName::Rolestats => rolestats::register(&self.to_string()),
-            ListenerName::Sniff => sniff::register(&self.to_string()),
-            ListenerName::Sql => sql::register(&self.to_string()),
-            ListenerName::Status => status::register(&self.to_string()),
-            ListenerName::Uids => uids::register(&self.to_string()),
-            ListenerName::Unapply => unapply::register(&self.to_string()),
-            ListenerName::Unregister => unregister::register(&self.to_string()),
-            ListenerName::Update => update::register(&self.to_string()),
-            ListenerName::Verify => verify::register(&self.to_string()),
-            ListenerName::Warn => warn::register(&self.to_string()),
-            ListenerName::Purge => purge::register(&self.to_string()),
+            ListenerName::Apply => apply::register(&self.to_string(), commands),
+            ListenerName::Bans => bans::register(&self.to_string(), commands),
+            ListenerName::Blacklist => blacklist::register(&self.to_string(), commands),
+            ListenerName::Card => card::register(&self.to_string(), commands),
+            ListenerName::Disband => disband::register(&self.to_string(), commands),
+            ListenerName::Message => message::register(&self.to_string(), commands),
+            ListenerName::Register => register::register(&self.to_string(), commands),
+            ListenerName::Role => role::register(&self.to_string(), commands),
+            ListenerName::Roles => roles::register(&self.to_string(), commands),
+            ListenerName::Rolestats => rolestats::register(&self.to_string(), commands),
+            ListenerName::Sniff => sniff::register(&self.to_string(), commands),
+            ListenerName::Sql => sql::register(&self.to_string(), commands),
+            ListenerName::Status => status::register(&self.to_string(), commands),
+            ListenerName::Uids => uids::register(&self.to_string(), commands),
+            ListenerName::Unapply => unapply::register(&self.to_string(), commands),
+            ListenerName::Unregister => unregister::register(&self.to_string(), commands),
+            ListenerName::Update => update::register(&self.to_string(), commands),
+            ListenerName::Verify => verify::register(&self.to_string(), commands),
+            ListenerName::Warn => warn::register(&self.to_string(), commands),
+            ListenerName::Purge => purge::register(&self.to_string(), commands),
         }
     }
 

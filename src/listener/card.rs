@@ -11,8 +11,8 @@ use sqlx::SqlitePool;
 
 use crate::database;
 
-pub fn register(name: &str) -> CreateCommand {
-    CreateCommand::new(name)
+pub fn register(name: &str, commands: &mut Vec<CreateCommand>) {
+    commands.push(CreateCommand::new(name)
             .description("Generate a player card. All relic slots must be filled. Optional color personalization in hex code.")
             .add_option(CreateCommandOption::new(CommandOptionType::Boolean, "showuid", "Should the card show your uid").required(true))
             .add_option(CreateCommandOption::new(CommandOptionType::Integer, "character", "Which support character should it generate").required(true)
@@ -26,7 +26,7 @@ pub fn register(name: &str) -> CreateCommand {
                 .add_int_choice("7", 7))
             .add_option(CreateCommandOption::new(CommandOptionType::String, "primarycolor", "Primary Color in hexcode notation").required(false))
             .add_option(CreateCommandOption::new(CommandOptionType::String, "secondarycolor", "Secondary Color in hexcode notation").required(false))
-            .dm_permission(false)
+            .dm_permission(false));
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

@@ -11,13 +11,16 @@ use sqlx::SqlitePool;
 
 use crate::database;
 
-pub fn register(name: &str) -> CreateCommand {
-    CreateCommand::new(name)
-        .description("Unregister your uid")
-        .add_option(
-            CreateCommandOption::new(CommandOptionType::Integer, "uid", "Your uid").required(true),
-        )
-        .dm_permission(false)
+pub fn register(name: &str, commands: &mut Vec<CreateCommand>) {
+    commands.push(
+        CreateCommand::new(name)
+            .description("Unregister your uid")
+            .add_option(
+                CreateCommandOption::new(CommandOptionType::Integer, "uid", "Your uid")
+                    .required(true),
+            )
+            .dm_permission(false),
+    );
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

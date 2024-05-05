@@ -14,16 +14,18 @@ use sqlx::SqlitePool;
 
 use crate::{database, updater, GUILD_ID};
 
-pub fn register(name: &str) -> CreateCommand {
-    CreateCommand::new(name)
-        .description("Verify a verification")
-        .add_option(
-            CreateCommandOption::new(CommandOptionType::Integer, "uid", "Uid")
-                .required(true)
-                .set_autocomplete(true),
-        )
-        .default_member_permissions(Permissions::MANAGE_ROLES)
-        .dm_permission(false)
+pub fn register(name: &str, commands: &mut Vec<CreateCommand>) {
+    commands.push(
+        CreateCommand::new(name)
+            .description("Verify a verification")
+            .add_option(
+                CreateCommandOption::new(CommandOptionType::Integer, "uid", "Uid")
+                    .required(true)
+                    .set_autocomplete(true),
+            )
+            .default_member_permissions(Permissions::MANAGE_ROLES)
+            .dm_permission(false),
+    );
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

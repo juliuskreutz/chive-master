@@ -12,39 +12,43 @@ use sqlx::SqlitePool;
 
 use crate::database;
 
-pub fn register(name: &str) -> CreateCommand {
-    CreateCommand::new(name)
-        .description("Role management")
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "set",
-                "Set a role breakpoint",
+pub fn register(name: &str, commands: &mut Vec<CreateCommand>) {
+    commands.push(
+        CreateCommand::new(name)
+            .description("Role management")
+            .add_option(
+                CreateCommandOption::new(
+                    CommandOptionType::SubCommand,
+                    "set",
+                    "Set a role breakpoint",
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::Role, "role", "Role")
+                        .required(true),
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::Integer, "chives", "Chives")
+                        .required(true),
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::Boolean, "permanent", "Permanent")
+                        .required(true),
+                ),
             )
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::Role, "role", "Role").required(true),
+            .add_option(
+                CreateCommandOption::new(
+                    CommandOptionType::SubCommand,
+                    "delete",
+                    "Delete a role breakpoint",
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::Role, "role", "Role")
+                        .required(true),
+                ),
             )
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::Integer, "chives", "Chives")
-                    .required(true),
-            )
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::Boolean, "permanent", "Permanent")
-                    .required(true),
-            ),
-        )
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "delete",
-                "Delete a role breakpoint",
-            )
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::Role, "role", "Role").required(true),
-            ),
-        )
-        .default_member_permissions(Permissions::MANAGE_ROLES)
-        .dm_permission(false)
+            .default_member_permissions(Permissions::MANAGE_ROLES)
+            .dm_permission(false),
+    );
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

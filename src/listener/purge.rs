@@ -14,35 +14,42 @@ use serenity::{
 };
 use sqlx::SqlitePool;
 
-pub fn register(name: &str) -> CreateCommand {
-    CreateCommand::new(name)
-        .description("Purge")
-        .add_option(
-            CreateCommandOption::new(CommandOptionType::SubCommand, "all", "Purge all messages")
+pub fn register(name: &str, commands: &mut Vec<CreateCommand>) {
+    commands.push(
+        CreateCommand::new(name)
+            .description("Purge")
+            .add_option(
+                CreateCommandOption::new(
+                    CommandOptionType::SubCommand,
+                    "all",
+                    "Purge all messages",
+                )
                 .add_sub_option(
                     CreateCommandOption::new(CommandOptionType::Integer, "amount", "Amount")
                         .required(true)
                         .min_int_value(1)
                         .max_int_value(100),
                 ),
-        )
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "user",
-                "Purge messages from a user",
             )
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::User, "user", "User").required(true),
+            .add_option(
+                CreateCommandOption::new(
+                    CommandOptionType::SubCommand,
+                    "user",
+                    "Purge messages from a user",
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::User, "user", "User")
+                        .required(true),
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::Integer, "amount", "Amount")
+                        .min_int_value(1)
+                        .max_int_value(100),
+                ),
             )
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::Integer, "amount", "Amount")
-                    .min_int_value(1)
-                    .max_int_value(100),
-            ),
-        )
-        .default_member_permissions(Permissions::MANAGE_MESSAGES)
-        .dm_permission(false)
+            .default_member_permissions(Permissions::MANAGE_MESSAGES)
+            .dm_permission(false),
+    );
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, _: &SqlitePool) -> Result<()> {

@@ -12,38 +12,40 @@ use sqlx::SqlitePool;
 
 use crate::database;
 
-pub fn register(name: &str) -> CreateCommand {
-    CreateCommand::new(name)
-        .description("Role management")
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "add",
-                "Add an emoji to the blacklist",
+pub fn register(name: &str, commands: &mut Vec<CreateCommand>) {
+    commands.push(
+        CreateCommand::new(name)
+            .description("Role management")
+            .add_option(
+                CreateCommandOption::new(
+                    CommandOptionType::SubCommand,
+                    "add",
+                    "Add an emoji to the blacklist",
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::String, "emoji", "Emoji")
+                        .required(true),
+                ),
             )
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::String, "emoji", "Emoji")
-                    .required(true),
-            ),
-        )
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "remove",
-                "Remove an emoji from the blacklist",
+            .add_option(
+                CreateCommandOption::new(
+                    CommandOptionType::SubCommand,
+                    "remove",
+                    "Remove an emoji from the blacklist",
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::String, "emoji", "Emoji")
+                        .required(true),
+                ),
             )
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::String, "emoji", "Emoji")
-                    .required(true),
-            ),
-        )
-        .add_option(CreateCommandOption::new(
-            CommandOptionType::SubCommand,
-            "list",
-            "List blacklist",
-        ))
-        .default_member_permissions(Permissions::ADMINISTRATOR)
-        .dm_permission(false)
+            .add_option(CreateCommandOption::new(
+                CommandOptionType::SubCommand,
+                "list",
+                "List blacklist",
+            ))
+            .default_member_permissions(Permissions::ADMINISTRATOR)
+            .dm_permission(false),
+    );
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

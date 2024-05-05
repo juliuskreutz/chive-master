@@ -19,13 +19,16 @@ use crate::{database, stardb};
 
 const UID_ID: &str = "uid";
 
-pub fn register(name: &str) -> CreateCommand {
-    CreateCommand::new(name)
-        .description("Register your account")
-        .add_option(
-            CreateCommandOption::new(CommandOptionType::Integer, "uid", "Your uid").required(true),
-        )
-        .dm_permission(false)
+pub fn register(name: &str, commands: &mut Vec<CreateCommand>) {
+    commands.push(
+        CreateCommand::new(name)
+            .description("Register your account")
+            .add_option(
+                CreateCommandOption::new(CommandOptionType::Integer, "uid", "Your uid")
+                    .required(true),
+            )
+            .dm_permission(false),
+    );
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {
@@ -39,20 +42,6 @@ pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqliteP
         .await?;
 
     let uid = command.data.options[0].value.as_i64().unwrap();
-
-    if uid == 420 {
-        return Err(anyhow!("Try 69 next.."));
-    }
-
-    if uid == 69 {
-        return Err(anyhow!(
-            "Try the answer to life next.. (If you don't know it, just google it)"
-        ));
-    }
-
-    if uid == 42 {
-        return Err(anyhow!("Don't forget to stay hydrated! Next answer is 💧"));
-    }
 
     if let Ok(score_data) = database::get_connection_by_uid(uid, pool).await {
         return Err(anyhow!(

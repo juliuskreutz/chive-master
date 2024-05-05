@@ -13,14 +13,17 @@ use serenity::{
 use sqlx::{Column, Row, SqlitePool, TypeInfo};
 use tabled::{builder::Builder, settings::Style};
 
-pub fn register(name: &str) -> CreateCommand {
-    CreateCommand::new(name)
-        .description("Sql command")
-        .add_option(
-            CreateCommandOption::new(CommandOptionType::String, "query", "Query").required(true),
-        )
-        .default_member_permissions(Permissions::ADMINISTRATOR)
-        .dm_permission(false)
+pub fn register(name: &str, commands: &mut Vec<CreateCommand>) {
+    commands.push(
+        CreateCommand::new(name)
+            .description("Sql command")
+            .add_option(
+                CreateCommandOption::new(CommandOptionType::String, "query", "Query")
+                    .required(true),
+            )
+            .default_member_permissions(Permissions::ADMINISTRATOR)
+            .dm_permission(false),
+    );
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

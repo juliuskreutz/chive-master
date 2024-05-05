@@ -13,10 +13,12 @@ use url::Url;
 
 use crate::{database, GUILD_ID};
 
-pub fn register(name: &str) -> CreateCommand {
-    CreateCommand::new(name)
-        .description("Shows the role distribution of this server")
-        .dm_permission(false)
+pub fn register(name: &str, commands: &mut Vec<CreateCommand>) {
+    commands.push(
+        CreateCommand::new(name)
+            .description("Shows the role distribution of this server")
+            .dm_permission(false),
+    );
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

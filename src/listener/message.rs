@@ -11,21 +11,23 @@ use serenity::{
 };
 use sqlx::SqlitePool;
 
-pub fn register(name: &str) -> CreateCommand {
-    CreateCommand::new(name)
-        .description("Message")
-        .add_option(CreateCommandOption::new(
-            CommandOptionType::SubCommand,
-            "verify",
-            "Verify message",
-        ))
-        .add_option(CreateCommandOption::new(
-            CommandOptionType::SubCommand,
-            "match",
-            "Match message",
-        ))
-        .default_member_permissions(Permissions::ADMINISTRATOR)
-        .dm_permission(false)
+pub fn register(name: &str, commands: &mut Vec<CreateCommand>) {
+    commands.push(
+        CreateCommand::new(name)
+            .description("Message")
+            .add_option(CreateCommandOption::new(
+                CommandOptionType::SubCommand,
+                "verify",
+                "Verify message",
+            ))
+            .add_option(CreateCommandOption::new(
+                CommandOptionType::SubCommand,
+                "match",
+                "Match message",
+            ))
+            .default_member_permissions(Permissions::ADMINISTRATOR)
+            .dm_permission(false),
+    )
 }
 
 pub async fn command(ctx: &Context, command: &CommandInteraction, pool: &SqlitePool) -> Result<()> {

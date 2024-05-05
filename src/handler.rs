@@ -82,10 +82,10 @@ impl Handler {
 #[serenity::async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, _: Ready) {
-        let commands = listener::ListenerName::iter()
-            .map(|c| c.register())
-            .collect();
-
+        let mut commands = Vec::new();
+        for l in listener::ListenerName::iter() {
+            l.register(&mut commands);
+        }
         Command::set_global_commands(&ctx, commands).await.unwrap();
 
         ctx.set_activity(Some(ActivityData::watching("Chive Hunters")));
