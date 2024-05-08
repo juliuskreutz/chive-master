@@ -1,20 +1,29 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use anyhow::Result;
+use linked_hash_map::LinkedHashMap;
 use serenity::{
     all::{
-        Command, CommandInteraction, ComponentInteraction, GuildId, Interaction, Member,
+        Command, CommandInteraction, ComponentInteraction, GuildId, Interaction, Member, Message,
         ModalInteraction, Reaction, Ready, RoleId, User,
     },
     builder::CreateInteractionResponseFollowup,
     client::{Context, EventHandler},
     futures::StreamExt,
     gateway::ActivityData,
+    prelude::TypeMapKey,
 };
 use sqlx::SqlitePool;
 use strum::IntoEnumIterator;
+use tokio::sync::Mutex;
 
 use crate::{listener, GUILD_ID};
+
+pub struct MessageCache;
+
+impl TypeMapKey for MessageCache {
+    type Value = Arc<Mutex<LinkedHashMap<(u64, u64), Message>>>;
+}
 
 pub struct Handler {
     pub pool: SqlitePool,
@@ -82,6 +91,12 @@ impl Handler {
 #[serenity::async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, _: Ready) {
+        {
+            let mut data = ctx.data.write().await;
+
+            data.insert::<MessageCache>(Default::default());
+        }
+
         let mut commands = Vec::new();
         for l in listener::ListenerName::iter() {
             l.register(&mut commands);
@@ -184,6 +199,20 @@ impl EventHandler for Handler {
             }
             _ => unimplemented!(),
         };
+    }
+
+    async fn message(&self, ctx: Context, message: Message) {
+        let message_cache_lock = {
+            let data = ctx.data.read().await;
+
+            data.get::<MessageCache>().unwrap().clone()
+        };
+
+        let mut message_cache = message_cache_lock.lock().await;
+        message_cache.insert((message.channel_id.get(), message.id.get()), message);
+        if message_cache.len() > 1000 {
+            message_cache.pop_front();
+        }
     }
 
     async fn reaction_add(&self, ctx: Context, reaction: Reaction) {

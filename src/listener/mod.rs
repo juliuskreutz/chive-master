@@ -132,6 +132,7 @@ impl ListenerName {
     ) -> Result<()> {
         match self {
             ListenerName::Register => register::modal(ctx, interaction, pool).await,
+            ListenerName::Warn => warn::modal(ctx, interaction, pool).await,
             _ => Ok(()),
         }
     }

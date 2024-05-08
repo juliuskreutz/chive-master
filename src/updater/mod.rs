@@ -197,11 +197,10 @@ async fn add_member_role(
             .await
             .is_err()
         {
-            if GUILD_ID
+            if !GUILD_ID
                 .roles(http)
                 .await?
-                .get(&RoleId::new(role as u64))
-                .is_none()
+                .contains_key(&RoleId::new(role as u64))
             {
                 i += 1;
             }
