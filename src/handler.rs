@@ -110,43 +110,19 @@ impl EventHandler for Handler {
                 .members_iter(&ctx)
                 .filter_map(|m| async move {
                     m.ok().and_then(|m| {
-                        (!m.roles.contains(&RoleId::new(1210489410467143741))).then_some(m)
+                        (!(m.roles.contains(&RoleId::new(1210489410467143741)) || m.user.bot))
+                            .then_some(m)
                     })
                 })
                 .collect::<Vec<_>>()
                 .await;
 
-            crate::updater::log(&format!("Total users {}", members.len()), &ctx.http).await;
-
-            for (i, members) in members.chunks(10).enumerate() {
-                let mut handles = vec![];
-
-                for member in members {
-                    let member = member.clone();
-
-                    if member.user.bot {
-                        continue;
+            for member in members {
+                loop {
+                    if member.add_role(&ctx, 1210489410467143741).await.is_ok() {
+                        break;
                     }
-
-                    let ctx = ctx.clone();
-                    handles.push(tokio::spawn(async move {
-                        loop {
-                            if let Err(e) = member.add_role(&ctx, 1210489410467143741).await {
-                                crate::updater::log(&format!("{e}"), &ctx.http).await;
-                            } else {
-                                break;
-                            }
-
-                            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-                        }
-                    }));
                 }
-
-                for handle in handles {
-                    handle.await.unwrap();
-                }
-
-                crate::updater::log(&format!("Updated chunk {i}"), &ctx.http).await;
             }
 
             crate::updater::log("<@246684413075652612> Done", &ctx.http).await;
