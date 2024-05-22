@@ -202,11 +202,13 @@ async fn warn(
         None => None,
     };
 
-    if let Some(create_message) = create_message.clone() {
-        dm_channel
-            .send_message(ctx, CreateMessage::new().content("Violating message:"))
-            .await?;
-        let _ = dm_channel.send_message(ctx, create_message).await;
+    if dmed {
+        if let Some(create_message) = create_message.clone() {
+            dm_channel
+                .send_message(ctx, CreateMessage::new().content("Violating message:"))
+                .await?;
+            dm_channel.send_message(ctx, create_message).await?;
+        }
     }
 
     let user = ctx.http.get_user(user).await?;
