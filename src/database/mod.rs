@@ -5,6 +5,7 @@ mod connections;
 mod matches;
 mod posts;
 mod roles;
+mod user_roles;
 mod verifications;
 mod warns;
 
@@ -15,6 +16,6 @@ pub use connections::*;
 pub use matches::*;
 pub use posts::*;
 pub use roles::*;
+pub use user_roles::*;
 pub use verifications::*;
 pub use warns::*;
-

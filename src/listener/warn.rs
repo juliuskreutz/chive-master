@@ -215,7 +215,6 @@ async fn warn(
     let channel = ChannelId::new(1209471689264603167);
 
     let db_warn = database::DbWarn {
-        id: 0,
         user: user.id.get() as i64,
         moderator: moderator.id.get() as i64,
         reason: reason.to_string(),

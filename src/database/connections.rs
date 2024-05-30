@@ -17,7 +17,7 @@ pub async fn get_users(pool: &SqlitePool) -> Result<Vec<i64>> {
 pub async fn get_connection_by_uid(uid: i64, pool: &SqlitePool) -> Result<DbConnection> {
     Ok(sqlx::query_as!(
         DbConnection,
-        "SELECT * FROM connections WHERE uid == ?1",
+        "SELECT * FROM connections WHERE uid == ?",
         uid
     )
     .fetch_one(pool)
@@ -37,7 +37,7 @@ pub async fn set_connection(data: &DbConnection, pool: &SqlitePool) -> Result<()
 }
 
 pub async fn delete_connection_by_uid(uid: i64, pool: &SqlitePool) -> Result<()> {
-    sqlx::query!("DELETE FROM connections WHERE uid = ?1", uid)
+    sqlx::query!("DELETE FROM connections WHERE uid = ?", uid)
         .execute(pool)
         .await?;
 
@@ -47,7 +47,7 @@ pub async fn delete_connection_by_uid(uid: i64, pool: &SqlitePool) -> Result<()>
 pub async fn get_connections_by_user(user: i64, pool: &SqlitePool) -> Result<Vec<DbConnection>> {
     Ok(sqlx::query_as!(
         DbConnection,
-        "SELECT * FROM connections WHERE user = ?1",
+        "SELECT * FROM connections WHERE user = ?",
         user
     )
     .fetch_all(pool)

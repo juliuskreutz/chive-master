@@ -1,5 +1,3 @@
-use std::usize;
-
 use anyhow::{anyhow, Result};
 use serenity::{
     all::{

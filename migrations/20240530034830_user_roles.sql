@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS user_roles (
+    user INTEGER NOT NULL,
+    role INTEGER NOT NULL
+);
+

@@ -3,9 +3,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct ScoreAchievement {
-    pub global_rank: usize,
     pub achievement_count: i64,
-    pub name: String,
     pub signature: String,
 }
 

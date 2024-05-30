@@ -2,7 +2,6 @@ use anyhow::Result;
 use sqlx::SqlitePool;
 
 pub struct DbWarn {
-    pub id: i64,
     pub user: i64,
     pub moderator: i64,
     pub reason: String,

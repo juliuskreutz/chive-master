@@ -5,7 +5,7 @@ use linked_hash_map::LinkedHashMap;
 use serenity::{
     all::{
         Command, CommandInteraction, ComponentInteraction, GuildId, Interaction, Member, Message,
-        ModalInteraction, Reaction, Ready, RoleId, User,
+        ModalInteraction, Reaction, Ready, RoleId, User, UserId,
     },
     builder::CreateInteractionResponseFollowup,
     client::{Context, EventHandler},
@@ -17,7 +17,7 @@ use sqlx::SqlitePool;
 use strum::IntoEnumIterator;
 use tokio::sync::Mutex;
 
-use crate::{listener, GUILD_ID};
+use crate::{database, listener, GUILD_ID};
 
 pub struct MessageCache;
 
@@ -26,6 +26,7 @@ impl TypeMapKey for MessageCache {
 }
 
 pub struct Handler {
+    pub user: Arc<Mutex<UserId>>,
     pub pool: SqlitePool,
     pub listeners: HashMap<String, listener::ListenerName>,
 }
@@ -90,7 +91,9 @@ impl Handler {
 
 #[serenity::async_trait]
 impl EventHandler for Handler {
-    async fn ready(&self, ctx: Context, _: Ready) {
+    async fn ready(&self, ctx: Context, ready: Ready) {
+        *self.user.lock().await = ready.user.id;
+
         {
             let mut data = ctx.data.write().await;
 
@@ -200,10 +203,70 @@ impl EventHandler for Handler {
             return;
         }
 
-        loop {
-            if member.add_role(&ctx, 1210489410467143741).await.is_ok() {
-                break;
+        let guild_roles = member.guild_id.roles(&ctx).await.unwrap();
+
+        let position = {
+            let user = *self.user.lock().await;
+            let member = member.guild_id.member(&ctx, user).await.unwrap();
+
+            member
+                .roles
+                .iter()
+                .map(|r| guild_roles[r].position)
+                .max()
+                .unwrap()
+        };
+
+        let mut roles = vec![1210489410467143741];
+
+        for user_role in database::get_user_roles_by_user(member.user.id.get() as i64, &self.pool)
+            .await
+            .unwrap()
+        {
+            if guild_roles
+                .get(&RoleId::new(user_role.role as u64))
+                .map(|r| r.position < position)
+                .unwrap_or_default()
+            {
+                roles.push(user_role.role as u64);
             }
+        }
+
+        for role in roles {
+            loop {
+                if member.add_role(&ctx, role).await.is_ok() {
+                    break;
+                }
+            }
+        }
+
+        database::delete_user_roles_by_user(member.user.id.get() as i64, &self.pool)
+            .await
+            .unwrap();
+    }
+
+    async fn guild_member_removal(
+        &self,
+        _: Context,
+        _: GuildId,
+        user: User,
+        member_data_if_available: Option<Member>,
+    ) {
+        let Some(member) = member_data_if_available else {
+            return;
+        };
+
+        let mut user_role = database::DbUserRole {
+            user: user.id.get() as i64,
+            role: 0,
+        };
+
+        for role in member.roles {
+            user_role.role = role.get() as i64;
+
+            database::set_user_role(&user_role, &self.pool)
+                .await
+                .unwrap();
         }
     }
 

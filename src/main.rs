@@ -4,7 +4,7 @@ mod listener;
 mod stardb;
 mod updater;
 
-use std::{collections::HashMap, env, str::FromStr};
+use std::{collections::HashMap, env, str::FromStr, sync::Arc};
 
 use anyhow::Result;
 use dotenv::dotenv;
@@ -34,6 +34,7 @@ async fn main() -> Result<()> {
 
     let mut client = Client::builder(&discord_token, GatewayIntents::all())
         .event_handler(Handler {
+            user: Arc::default(),
             listeners,
             pool: pool.clone(),
         })

@@ -21,7 +21,7 @@ pub async fn get_verifications(pool: &SqlitePool) -> Result<Vec<DbVerification>>
 pub async fn get_verification_by_uid(uid: i64, pool: &SqlitePool) -> Result<DbVerification> {
     Ok(sqlx::query_as!(
         DbVerification,
-        "SELECT * FROM verifications WHERE uid = ?1",
+        "SELECT * FROM verifications WHERE uid = ?",
         uid
     )
     .fetch_one(pool)
@@ -34,7 +34,7 @@ pub async fn get_verifications_by_user(
 ) -> Result<Vec<DbVerification>> {
     Ok(sqlx::query_as!(
         DbVerification,
-        "SELECT * FROM verifications WHERE user == ?1",
+        "SELECT * FROM verifications WHERE user == ?",
         user
     )
     .fetch_all(pool)
@@ -70,7 +70,7 @@ pub async fn set_verification(data: &DbVerification, pool: &SqlitePool) -> Resul
 }
 
 pub async fn delete_verification_by_uid(uid: i64, pool: &SqlitePool) -> Result<()> {
-    sqlx::query!("DELETE FROM verifications WHERE uid == ?1", uid)
+    sqlx::query!("DELETE FROM verifications WHERE uid == ?", uid)
         .execute(pool)
         .await?;
 

@@ -23,7 +23,7 @@ pub async fn set_emoji(blacklist: DbBlacklist, pool: &SqlitePool) -> Result<()> 
 }
 
 pub async fn delete_emoji_by_emoji(emoji: &str, pool: &SqlitePool) -> Result<()> {
-    sqlx::query!("DELETE FROM blacklist WHERE emoji == ?1", emoji)
+    sqlx::query!("DELETE FROM blacklist WHERE emoji == ?", emoji)
         .execute(pool)
         .await?;
 

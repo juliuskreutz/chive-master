@@ -21,7 +21,7 @@ pub async fn set_role(data: &DbRole, pool: &SqlitePool) -> Result<()> {
 }
 
 pub async fn delete_role_by_role(role: i64, pool: &SqlitePool) -> Result<()> {
-    sqlx::query!("DELETE FROM roles WHERE role == ?1", role)
+    sqlx::query!("DELETE FROM roles WHERE role == ?", role)
         .execute(pool)
         .await?;
 
