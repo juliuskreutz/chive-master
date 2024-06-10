@@ -192,18 +192,24 @@ async fn add_member_role(
     let mut i = 0;
 
     while i < 5 {
-        if member
-            .add_role(http, RoleId::new(role as u64))
-            .await
-            .is_err()
-        {
-            if !GUILD_ID
-                .roles(http)
-                .await?
-                .contains_key(&RoleId::new(role as u64))
-            {
+        if let Err(e) = member.add_role(http, RoleId::new(role as u64)).await {
+            log(&format!("{i}: {e:?}"), http).await;
+
+            let roles = GUILD_ID.roles(http).await?;
+
+            log(&format!("{i}: {roles:?}"), http).await;
+
+            if !roles.contains_key(&RoleId::new(role as u64)) {
                 i += 1;
             }
+
+            //if !GUILD_ID
+            //    .roles(http)
+            //    .await?
+            //    .contains_key(&RoleId::new(role as u64))
+            //{
+            //    i += 1;
+            //}
 
             tokio::time::sleep(std::time::Duration::from_secs(5)).await;
         } else {
