@@ -192,24 +192,18 @@ async fn add_member_role(
     let mut i = 0;
 
     while i < 5 {
-        if let Err(e) = member.add_role(http, RoleId::new(role as u64)).await {
-            log(&format!("{i}: {e:?}"), http).await;
-
-            let roles = GUILD_ID.roles(http).await?;
-
-            log(&format!("{i}: {roles:?}"), http).await;
-
-            if !roles.contains_key(&RoleId::new(role as u64)) {
+        if member
+            .add_role(http, RoleId::new(role as u64))
+            .await
+            .is_err()
+        {
+            if !GUILD_ID
+                .roles(http)
+                .await?
+                .contains_key(&RoleId::new(role as u64))
+            {
                 i += 1;
             }
-
-            //if !GUILD_ID
-            //    .roles(http)
-            //    .await?
-            //    .contains_key(&RoleId::new(role as u64))
-            //{
-            //    i += 1;
-            //}
 
             tokio::time::sleep(std::time::Duration::from_secs(5)).await;
         } else {
@@ -232,16 +226,36 @@ async fn remove_member_role(
     http: &Arc<Http>,
     pool: &SqlitePool,
 ) -> Result<()> {
-    if member
-        .remove_role(http, RoleId::new(role as u64))
-        .await
-        .is_err()
-        && d.insert(role)
-    {
-        log( &format!( "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>", role), http) .await;
-
-        database::delete_role_by_role(role, pool).await?;
+    if d.contains(&role) {
+        return Ok(());
     }
+
+    let mut i = 0;
+
+    while i < 5 {
+        if member
+            .remove_role(http, RoleId::new(role as u64))
+            .await
+            .is_err()
+        {
+            if !GUILD_ID
+                .roles(http)
+                .await?
+                .contains_key(&RoleId::new(role as u64))
+            {
+                i += 1;
+            }
+
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        } else {
+            return Ok(());
+        }
+    }
+
+    d.insert(role);
+    log(&format!( "Error: Role <@&{}>. Wrong permissions or doesn't exists. Deleting! <@246684413075652612>", role), http) .await;
+
+    database::delete_role_by_role(role, pool).await?;
 
     Ok(())
 }
