@@ -137,7 +137,7 @@ pub async fn modal(ctx: &Context, interaction: &ModalInteraction, pool: &SqliteP
     }
 
     let reason = inputs["reason"].clone();
-    let warned_message = match (inputs.get("message"), inputs.get("channel")) {
+    let (warned_message, message) = match (inputs.get("message"), inputs.get("channel")) {
         (Some(message_id), Some(channel_id)) => {
             let channel_id = ChannelId::new(channel_id.parse()?);
             let message_id = MessageId::new(message_id.parse()?);
@@ -158,14 +158,16 @@ pub async fn modal(ctx: &Context, interaction: &ModalInteraction, pool: &SqliteP
                 }
             };
 
-            let _ = message.delete(&ctx).await;
-
-            Some(message_to_warned_message(&message))
+            (Some(message_to_warned_message(&message)), Some(message))
         }
-        _ => None,
+        _ => (None, None),
     };
 
     warn(ctx, user, &reason, warned_message, &interaction.user, pool).await?;
+
+    if let Some(message) = message {
+        let _ = message.delete(&ctx).await;
+    }
 
     interaction
         .create_followup(
