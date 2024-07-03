@@ -1,4 +1,5 @@
 use anyhow::Result;
+use reqwest::header;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -43,7 +44,10 @@ pub async fn put(uid: i64) -> Result<ScoreAchievement> {
     {
         Ok(sa)
     } else {
-        let value: serde_json::Value = reqwest::get("https://enka.network/api/hsr/uid/{uid}")
+        let value: serde_json::Value = reqwest::Client::new()
+            .get("https://enka.network/api/hsr/uid/{uid}")
+            .header(header::USER_AGENT, "stardb")
+            .send()
             .await?
             .json()
             .await?;
