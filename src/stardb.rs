@@ -36,7 +36,7 @@ pub async fn put(uid: i64) -> Result<ScoreAchievement> {
     }
 
     let value: serde_json::Value = reqwest::Client::new()
-        .get(format!("https://enka.network/api/hsr/uid/{uid}"))
+        .get(format!("https://enka.network/api/hsr/uid/{uid}?info"))
         .header(header::USER_AGENT, "stardb")
         .send()
         .await?
