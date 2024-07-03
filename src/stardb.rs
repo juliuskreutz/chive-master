@@ -36,18 +36,18 @@ pub async fn put(uid: i64) -> Result<ScoreAchievement> {
     }
 
     let value: serde_json::Value = reqwest::Client::new()
-        .get(format!("https://enka.network/api/hsr/uid/{uid}?info"))
+        .get(format!("https://enka.network/api/hsr/uid/{uid}"))
         .header(header::USER_AGENT, "stardb")
         .send()
         .await?
         .json()
         .await?;
 
-    let achievement_count = value["playerInfo"]["finishAchievementNum"]
+    let achievement_count = value["detailInfo"]["recordInfo"]["achievementCount"]
         .as_i64()
         .unwrap();
 
-    let signature = value["playerInfo"]["signature"]
+    let signature = value["detailInfo"]["signature"]
         .as_str()
         .unwrap()
         .to_string();
