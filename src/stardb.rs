@@ -33,16 +33,14 @@ pub async fn get(uid: i64) -> Result<ScoreAchievement> {
 }
 
 pub async fn put(uid: i64) -> Result<ScoreAchievement> {
-    if let Ok(sa) = reqwest::Client::new()
+    if let Ok(response) = reqwest::Client::new()
         .put(&format!(
             "http://localhost:8000/api/scores/achievements/{uid}"
         ))
         .send()
-        .await?
-        .json::<ScoreAchievement>()
         .await
     {
-        Ok(sa)
+        Ok(response.json::<ScoreAchievement>().await?)
     } else {
         let value: serde_json::Value = reqwest::Client::new()
             .get("https://enka.network/api/hsr/uid/{uid}")
