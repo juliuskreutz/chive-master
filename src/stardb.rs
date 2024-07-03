@@ -32,7 +32,7 @@ pub async fn get(uid: i64) -> Result<ScoreAchievement> {
 }
 
 pub async fn put(uid: i64) -> Result<ScoreAchievement> {
-    reqwest::Client::new()
+    if let Ok(sa) = reqwest::Client::new()
         .put(&format!(
             "http://localhost:8000/api/scores/achievements/{uid}"
         ))
@@ -40,5 +40,26 @@ pub async fn put(uid: i64) -> Result<ScoreAchievement> {
         .await?
         .json::<ScoreAchievement>()
         .await
-        .map_err(|e| anyhow::anyhow!("{e}: {uid}"))
+    {
+        Ok(sa)
+    } else {
+        let value: serde_json::Value = reqwest::get("https://enka.network/api/hsr/uid/{uid}")
+            .await?
+            .json()
+            .await?;
+
+        let achievement_count = value["detailInfo"]["recordInfo"]["achievementCount"]
+            .as_i64()
+            .unwrap();
+
+        let signature = value["detailInfo"]["signature"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        Ok(ScoreAchievement {
+            achievement_count,
+            signature,
+        })
+    }
 }
