@@ -40,28 +40,30 @@ pub async fn put(uid: i64) -> Result<ScoreAchievement> {
         .send()
         .await
     {
-        Ok(response.json::<ScoreAchievement>().await?)
-    } else {
-        let value: serde_json::Value = reqwest::Client::new()
-            .get("https://enka.network/api/hsr/uid/{uid}")
-            .header(header::USER_AGENT, "stardb")
-            .send()
-            .await?
-            .json()
-            .await?;
-
-        let achievement_count = value["detailInfo"]["recordInfo"]["achievementCount"]
-            .as_i64()
-            .unwrap();
-
-        let signature = value["detailInfo"]["signature"]
-            .as_str()
-            .unwrap()
-            .to_string();
-
-        Ok(ScoreAchievement {
-            achievement_count,
-            signature,
-        })
+        if let Ok(sa) = response.json::<ScoreAchievement>().await {
+            return Ok(sa);
+        }
     }
+
+    let value: serde_json::Value = reqwest::Client::new()
+        .get("https://enka.network/api/hsr/uid/{uid}")
+        .header(header::USER_AGENT, "stardb")
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    let achievement_count = value["detailInfo"]["recordInfo"]["achievementCount"]
+        .as_i64()
+        .unwrap();
+
+    let signature = value["detailInfo"]["signature"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    Ok(ScoreAchievement {
+        achievement_count,
+        signature,
+    })
 }
