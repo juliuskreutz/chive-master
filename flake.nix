@@ -26,6 +26,7 @@
             buildInputs = [
               rust-bin.stable.latest.default
               rust-analyzer
+              taplo
               pkg-config
               openssl
               sqlx-cli

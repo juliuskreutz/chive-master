@@ -13,25 +13,25 @@ pre-build = [
 image = "ubuntu:22.04"
 
 [dependencies]
-tokio = { version = "1.37.0", default-features = false, features = [
+tokio = { version = "1.38.0", default-features = false, features = [
   "rt-multi-thread",
 ] }
-serenity = "0.12.1"
+serenity = "0.12.2"
 sqlx = { version = "0.7.4", features = [
   "runtime-tokio-native-tls",
   "sqlite",
   "chrono",
 ] }
-reqwest = { version = "0.12.4", features = ["json"] }
-serde = { version = "1.0.201", features = ["derive"] }
-serde_json = "1.0.117"
+reqwest = { version = "0.12.5", features = ["json"] }
+serde = { version = "1.0.203", features = ["derive"] }
+serde_json = "1.0.120"
 rand = "0.8.5"
-anyhow = "1.0.83"
+anyhow = "1.0.86"
 dotenv = "0.15.0"
-url = "2.5.0"
+url = "2.5.2"
 chrono = "0.4.38"
 unic-emoji-char = "0.9.0"
 tabled = "0.15.0"
-strum = "0.26.2"
-strum_macros = "0.26.2"
+strum = "0.26.3"
+strum_macros = "0.26.4"
 linked-hash-map = "0.5.6"
