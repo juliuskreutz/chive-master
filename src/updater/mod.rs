@@ -1,3 +1,4 @@
+mod daily_reminder;
 mod hsr_posts;
 mod matches;
 mod roles;
@@ -24,8 +25,8 @@ use crate::{database, stardb, GUILD_ID};
 pub fn init(http: Arc<Http>, pool: SqlitePool) {
     {
         let http = http.clone();
-
         let pool = pool.clone();
+
         tokio::spawn(async move {
             loop {
                 let http = http.clone();
@@ -103,24 +104,39 @@ pub fn init(http: Arc<Http>, pool: SqlitePool) {
         });
     }
 
+    {
+        let http = http.clone();
+        let pool = pool.clone();
+
+        tokio::spawn(async move {
+            loop {
+                let http = http.clone();
+                let pool = pool.clone();
+
+                let task = tokio::spawn(async move {
+                    let now = Instant::now();
+                    if let Err(e) = roles::update(&http, &pool).await {
+                        log(&format!("Error: Roles {} <@246684413075652612>", e), &http).await;
+                    }
+                    log(
+                        &format!("Updated roles in {} seconds", now.elapsed().as_secs()),
+                        &http,
+                    )
+                    .await;
+                });
+
+                let _ = task.await;
+            }
+        });
+    }
+
     tokio::spawn(async move {
-        loop {
-            let http = http.clone();
-            let pool = pool.clone();
-
-            let task = tokio::spawn(async move {
-                let now = Instant::now();
-                if let Err(e) = roles::update(&http, &pool).await {
-                    log(&format!("Error: Roles {} <@246684413075652612>", e), &http).await;
-                }
-                log(
-                    &format!("Updated roles in {} seconds", now.elapsed().as_secs()),
-                    &http,
-                )
-                .await;
-            });
-
-            let _ = task.await;
+        if let Err(e) = daily_reminder::spawn(http.clone()).await {
+            log(
+                &format!("Error: Daily Reminder {} <@246684413075652612>", e),
+                &http,
+            )
+            .await;
         }
     });
 }
