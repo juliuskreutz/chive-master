@@ -36,7 +36,7 @@ pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
 
         if let Ok(channel) = UserId::new(user as u64).create_dm_channel(http).await {
             let _ = channel
-                .send_message(http, CreateMessage::new().content("Congratulations Completionist! You are now @Chive Verified and your profile will appear on the Chive Leaderboards: https://stardb.gg/leaderboard. You can change your HSR bio back to what it was originally. Additionally, you've gained access to the https://discord.com/channels/1008493665116758167/1108110331043123200 channel.")
+                .send_message(http, CreateMessage::new().content("Congratulations Completionist! You are now @Chive Verified and your profile will appear on the Chive Leaderboards: https://stardb.gg/leaderboard. You can change your HSR bio back to what it was originally.")
                 )
                 .await;
         }
