@@ -8,7 +8,7 @@ pub async fn spawn(http: Arc<Http>) -> anyhow::Result<()> {
     let  scheduler = JobScheduler::new().await?;
 
     scheduler
-        .add(Job::new_async("* 0 16 * * *", move |_,  _| {
+        .add(Job::new_async("0 6 16 * * *", move |_,  _| {
             let http = http.clone();
             
             Box::pin(async move {
@@ -23,7 +23,7 @@ pub async fn spawn(http: Arc<Http>) -> anyhow::Result<()> {
 - [Honkai: Star Rail](<https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311>)
 - [Zenless Zone Zero](<https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091>)").footer(CreateEmbedFooter::new(format!("{month} - Day {day}"))).color(0x2b9b7b);
                              
-                channel.send_message(&http, CreateMessage::new().content("<@1260628582032605314>").embed(embed)).await.unwrap();
+                channel.send_message(&http, CreateMessage::new().content("<@&1260628582032605314>").embed(embed)).await.unwrap();
             })
         })?)
         .await?;
