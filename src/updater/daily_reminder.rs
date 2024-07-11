@@ -8,7 +8,7 @@ pub async fn spawn(http: Arc<Http>) -> anyhow::Result<()> {
     let  scheduler = JobScheduler::new().await?;
 
     scheduler
-        .add(Job::new_async("0 6 16 * * *", move |_,  _| {
+        .add(Job::new_async("0 10 16 * * *", move |_,  _| {
             let http = http.clone();
             
             Box::pin(async move {
