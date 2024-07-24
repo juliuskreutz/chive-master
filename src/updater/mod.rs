@@ -1,4 +1,5 @@
 mod daily_reminder;
+mod gi_posts;
 mod hsr_posts;
 mod matches;
 mod roles;
