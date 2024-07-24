@@ -68,6 +68,20 @@ pub fn init(http: Arc<Http>, pool: SqlitePool) {
                         .await;
 
                         let now = Instant::now();
+                        if let Err(e) = gi_posts::update(&http, &pool).await {
+                            log(
+                                &format!("Error: Gi posts {} <@246684413075652612>", e),
+                                &http,
+                            )
+                            .await;
+                        }
+                        log(
+                            &format!("Updated gi posts in {} seconds", now.elapsed().as_secs()),
+                            &http,
+                        )
+                        .await;
+
+                        let now = Instant::now();
                         if let Err(e) = verifications::update(&http, &pool).await {
                             log(
                                 &format!("Error: Verifications {} <@246684413075652612>", e),
