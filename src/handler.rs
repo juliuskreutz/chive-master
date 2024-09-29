@@ -4,8 +4,9 @@ use anyhow::Result;
 use linked_hash_map::LinkedHashMap;
 use serenity::{
     all::{
-        Command, CommandInteraction, ComponentInteraction, GuildId, Interaction, Member, Message,
-        ModalInteraction, Reaction, Ready, RoleId, User, UserId,
+        Channel, ChannelType, Command, CommandInteraction, ComponentInteraction, GuildChannel,
+        GuildId, Interaction, Member, Message, ModalInteraction, Reaction, Ready, RoleId, User,
+        UserId,
     },
     builder::CreateInteractionResponseFollowup,
     client::{Context, EventHandler},
@@ -181,6 +182,13 @@ impl EventHandler for Handler {
     }
 
     async fn message(&self, ctx: Context, message: Message) {
+        if let Ok(Channel::Guild(channel)) = message.channel(&ctx).await {
+            let re = regex::Regex::new(r"<@&\d+>").unwrap();
+            if channel.kind == ChannelType::News && re.find(&message.content).is_some() {
+                let _ = message.crosspost(&ctx).await;
+            }
+        }
+
         let message_cache_lock = {
             let data = ctx.data.read().await;
 
