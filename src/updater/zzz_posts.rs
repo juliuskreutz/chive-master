@@ -157,6 +157,8 @@ pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
             .await?;
         channel
             .send_message(http, CreateMessage::new().embed(embed))
+            .await?
+            .crosspost(http)
             .await?;
     }
     Ok(())

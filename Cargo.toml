@@ -22,7 +22,7 @@ sqlx = { version = "0.8.2", features = [
   "sqlite",
   "chrono",
 ] }
-reqwest = { version = "0.12.7", features = ["json"] }
+reqwest = { version = "0.12.8", features = ["json"] }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
 rand = "0.8.5"

@@ -182,10 +182,12 @@ impl EventHandler for Handler {
     }
 
     async fn message(&self, ctx: Context, message: Message) {
-        if let Ok(Channel::Guild(channel)) = message.channel(&ctx).await {
-            let re = regex::Regex::new(r"<@&\d+>").unwrap();
-            if channel.kind == ChannelType::News && re.find(&message.content).is_some() {
-                let _ = message.crosspost(&ctx).await;
+        if !message.author.bot {
+            if let Ok(Channel::Guild(channel)) = message.channel(&ctx).await {
+                let re = regex::Regex::new(r"<@&\d+>").unwrap();
+                if channel.kind == ChannelType::News && re.find(&message.content).is_some() {
+                    let _ = message.crosspost(&ctx).await;
+                }
             }
         }
 
