@@ -1,6 +1,7 @@
 mod apply;
 mod bans;
 mod blacklist;
+mod blade;
 mod card;
 mod disband;
 mod message;
@@ -17,7 +18,6 @@ mod unapply;
 mod unregister;
 mod update;
 mod verify;
-mod voiceguess;
 mod warn;
 
 use anyhow::Result;
@@ -53,7 +53,7 @@ pub enum ListenerName {
     Verify,
     Warn,
     Purge,
-    Voiceguess,
+    Blade,
 }
 
 impl ListenerName {
@@ -79,7 +79,7 @@ impl ListenerName {
             ListenerName::Verify => verify::register(&self.to_string(), commands),
             ListenerName::Warn => warn::register(&self.to_string(), commands),
             ListenerName::Purge => purge::register(&self.to_string(), commands),
-            ListenerName::Voiceguess => voiceguess::register(&self.to_string(), commands),
+            ListenerName::Blade => blade::register(&self.to_string(), commands),
         }
     }
 
@@ -110,7 +110,7 @@ impl ListenerName {
             ListenerName::Verify => verify::command(ctx, command, pool).await,
             ListenerName::Warn => warn::command(ctx, command, pool).await,
             ListenerName::Purge => purge::command(ctx, command, pool).await,
-            ListenerName::Voiceguess => voiceguess::command(ctx, command, pool).await,
+            ListenerName::Blade => blade::command(ctx, command, pool).await,
         }
     }
 
