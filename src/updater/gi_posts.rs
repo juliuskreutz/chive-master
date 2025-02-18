@@ -57,7 +57,9 @@ struct Image {
 
 pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
     let client = reqwest::Client::new();
+
     let role = RoleId::new(1265445068614009002);
+    let mut embeds = Vec::new();
 
     let json_notices: Json<Article> = client.get("https://bbs-api-os.hoyolab.com/community/post/wapi/getNewsList?gids=2&page_size=15&type=1").send().await.unwrap().json().await.unwrap();
     let json_infos: Json<Article> = client.get("https://bbs-api-os.hoyolab.com/community/post/wapi/getNewsList?gids=2&page_size=15&type=3").send().await.unwrap().json().await.unwrap();
@@ -110,15 +112,7 @@ pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
             embed = embed.thumbnail(&image.url);
         }
 
-        channel
-            .send_message(
-                http,
-                CreateMessage::new().content(format!("{}", role.mention())),
-            )
-            .await?;
-        channel
-            .send_message(http, CreateMessage::new().embed(embed))
-            .await?;
+        embeds.push(embed);
     }
 
     let json_events: Json<Event> = client.get("https://bbs-api-os.hoyolab.com/community/community_contribution/wapi/event/list?gids=2&page_size=15&size=15").header("x-rpc-client_type", "4").send().await.unwrap().json().await.unwrap();
@@ -149,17 +143,27 @@ pub async fn update(http: &Arc<Http>, pool: &SqlitePool) -> Result<()> {
             .field("Start", format!("<t:{}:R>", event.start), true)
             .field("End", format!("<t:{}:R>", event.end), true);
 
-        channel
-            .send_message(
-                http,
-                CreateMessage::new().content(format!("{}", role.mention())),
-            )
-            .await?;
+        embeds.push(embed);
+    }
+
+    if embeds.is_empty() {
+        return Ok(());
+    }
+
+    channel
+        .send_message(
+            http,
+            CreateMessage::new().content(format!("{}", role.mention())),
+        )
+        .await?;
+
+    for embed in embeds {
         channel
             .send_message(http, CreateMessage::new().embed(embed))
             .await?
             .crosspost(http)
             .await?;
     }
+
     Ok(())
 }
