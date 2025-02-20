@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use chrono::Utc;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, Rng};
 use serenity::{
     all::{
         ActionRowComponent, CommandInteraction, CommandOptionType, ComponentInteraction,
@@ -179,7 +179,7 @@ fn response(otp: &str) -> CreateInteractionResponseFollowup {
 fn otp() -> String {
     let disallowed = ['I', 'l', 'O', '0'];
 
-    rand::thread_rng()
+    rand::rng()
         .sample_iter(&Alphanumeric)
         .filter(|&c| !disallowed.contains(&(c as char)))
         .take(6)
